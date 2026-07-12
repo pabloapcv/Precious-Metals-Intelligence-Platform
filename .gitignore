@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Environment
+.env
+.env.local
+
+# Data & models
+data/raw/
+data/processed/
+data/*.db
+data/*.db-*
+models/*.pkl
+models/*.joblib
+mlruns/
+mlflow/
+.pytest_cache/
+.run/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Logs
+*.log
+logs/
+
+# Jupyter
+.ipynb_checkpoints/
