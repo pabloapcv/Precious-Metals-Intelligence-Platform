@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -124,24 +125,28 @@ def run_walk_forward_validation(
     pred = (proba > 0.5).astype(int)
 
     try:
-      auc = roc_auc_score(y_test, proba)
+      auc = float(roc_auc_score(y_test, proba))
+      if math.isnan(auc) or math.isinf(auc):
+        auc = None
     except ValueError:
-      auc = 0.5
+      auc = None
 
     fold_metrics.append({
       "fold": i,
-      "accuracy": accuracy_score(y_test, pred),
+      "accuracy": float(accuracy_score(y_test, pred)),
       "auc": auc,
-      "n_test": len(y_test),
+      "n_test": int(len(y_test)),
     })
 
   if not fold_metrics:
     return {"error": "no valid folds", "folds": 0}
 
+  aucs = [f["auc"] for f in fold_metrics if f["auc"] is not None]
+  accs = [f["accuracy"] for f in fold_metrics]
   return {
     "folds": len(fold_metrics),
-    "mean_accuracy": np.mean([f["accuracy"] for f in fold_metrics]),
-    "mean_auc": np.mean([f["auc"] for f in fold_metrics]),
+    "mean_accuracy": float(np.mean(accs)) if accs else None,
+    "mean_auc": float(np.mean(aucs)) if aucs else None,
     "fold_details": fold_metrics,
   }
 
@@ -303,4 +308,87 @@ def generate_predictions(session: Session, as_of: date | None = None) -> int:
       count += 1
 
   session.commit()
+  return count
+
+
+def backfill_prediction_history(
+  session: Session,
+  lookback_days: int = 180,
+  step: int = 5,
+  entities: list[str] | None = None,
+  horizons: list[int] | None = None,
+) -> int:
+  """Score trained models on historical feature dates so charts have a real time series.
+
+  Walks backwards through available feature rows every ``step`` trading days
+  and upserts predictions. Uses current model artifacts (point-in-time features,
+  current weights) — suitable for outlook history visualization.
+  """
+  settings = get_settings()
+  features = load_feature_matrix(session)
+  if features.empty:
+    return 0
+
+  model_dir = Path(settings.model_registry_path)
+  target_entities = entities or [t["entity"] for t in PREDICTION_TARGETS]
+  target_horizons = horizons or list(HORIZONS)
+
+  # Sample every `step` rows within lookback window
+  cutoff = features.index.max() - pd.Timedelta(days=lookback_days)
+  window = features[features.index >= cutoff]
+  if window.empty:
+    window = features
+  sample_idx = window.index[::step]
+  if len(window.index) and window.index[-1] not in sample_idx:
+    sample_idx = sample_idx.append(pd.Index([window.index[-1]]))
+  if len(sample_idx) == 0:
+    return 0
+
+  count = 0
+  backend_tag = "lgbm" if LIGHTGBM_AVAILABLE else "sklearn"
+
+  for entity in target_entities:
+    for horizon in target_horizons:
+      meta_path = model_dir / f"{entity}_meta_h{horizon}.pkl"
+      clf_path = model_dir / f"{entity}_clf_h{horizon}.pkl"
+      reg_path = model_dir / f"{entity}_reg_h{horizon}.pkl"
+      if not all(p.exists() for p in (meta_path, clf_path, reg_path)):
+        continue
+
+      meta = joblib.load(meta_path)
+      clf = joblib.load(clf_path)
+      reg = joblib.load(reg_path)
+      feat_cols = [c for c in meta["feature_names"] if c in features.columns]
+      if not feat_cols:
+        continue
+
+      X = window.loc[sample_idx, feat_cols].fillna(0).values
+      probs = predict_classifier(clf, X)
+      rets = predict_regressor(reg, X)
+
+      records = []
+      for i, ts in enumerate(sample_idx):
+        d = ts.date() if hasattr(ts, "date") else ts
+        records.append({
+          "date": d,
+          "entity": entity,
+          "horizon_days": horizon,
+          "prob_outperform_gold": float(probs[i]),
+          "prob_beat_gdx": float(probs[i]) * 0.95,
+          "expected_return": float(rets[i]),
+          "expected_alpha": float(rets[i]) - 0.01,
+          "model_version": f"{backend_tag}_h{horizon}",
+        })
+
+      upsert(
+        session,
+        ModelPrediction,
+        records,
+        "uq_prediction",
+        ["prob_outperform_gold", "prob_beat_gdx", "expected_return", "expected_alpha"],
+      )
+      count += len(records)
+
+  session.commit()
+  logger.info("Backfilled %d historical prediction rows", count)
   return count

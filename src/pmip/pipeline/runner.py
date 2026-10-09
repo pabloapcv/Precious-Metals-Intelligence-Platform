@@ -3,17 +3,42 @@
 from __future__ import annotations
 
 import logging
+import math
 from datetime import date
+
+import numpy as np
 
 from pmip.constants import ALL_MINERS, HORIZONS, PREDICTION_TARGETS
 from pmip.db.session import get_db_session
 from pmip.etl.pipeline import run_daily_etl
 from pmip.features.engineering import run_feature_engineering
 from pmip.models.regime import run_regime_detection
-from pmip.models.training import generate_predictions, train_and_save_models
+from pmip.models.training import (
+  backfill_prediction_history,
+  generate_predictions,
+  train_and_save_models,
+)
 from pmip.portfolio.optimizer import optimize_portfolio, save_portfolio_recommendations
 
 logger = logging.getLogger(__name__)
+
+
+def _json_safe(value):
+  """Convert numpy scalars and non-finite floats so FastAPI can serialize the payload."""
+  if isinstance(value, dict):
+    return {k: _json_safe(v) for k, v in value.items()}
+  if isinstance(value, (list, tuple)):
+    return [_json_safe(v) for v in value]
+  if isinstance(value, (np.floating, float)):
+    num = float(value)
+    if math.isnan(num) or math.isinf(num):
+      return None
+    return num
+  if isinstance(value, (np.integer,)):
+    return int(value)
+  if isinstance(value, np.ndarray):
+    return _json_safe(value.tolist())
+  return value
 
 
 def run_full_pipeline(
@@ -47,19 +72,23 @@ def run_full_pipeline(
     pred_count = generate_predictions(session)
     logger.info("Predictions generated: %d", pred_count)
 
+    hist_count = backfill_prediction_history(session, lookback_days=180, step=5)
+    logger.info("Historical predictions backfilled: %d", hist_count)
+
     miner_tickers = [m["ticker"] for m in ALL_MINERS] + ["GDX", "GDXJ", "GLD"]
     portfolio = optimize_portfolio(session, miner_tickers, method="hrp")
     if not portfolio.empty:
       port_count = save_portfolio_recommendations(session, portfolio, date.today())
       logger.info("Portfolio saved: %d positions", port_count)
 
-  return {
+  return _json_safe({
     "status": "complete",
     "etl": etl_results,
     "features": feat_count,
     "regimes": regime_count,
     "predictions_generated": pred_count,
+    "historical_predictions": hist_count,
     "portfolio_positions": port_count,
     "models_trained": len([r for r in train_results if r.get("status") == "trained"]),
     "train_results": train_results,
-  }
+  })
