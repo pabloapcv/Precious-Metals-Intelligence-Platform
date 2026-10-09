@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from pmip.api.explain_service import get_explainability
+from pmip.api.history_service import get_history
 from pmip.api.macro_service import build_macro_snapshot
 from pmip.api.research_service import (
   get_macro_series,
@@ -556,6 +557,21 @@ def explain(db: Session = Depends(get_db)):
     return get_explainability(db)
   except Exception as exc:
     logger.exception("Explain endpoint failed")
+    raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/history")
+def history(
+  db: Session = Depends(get_db),
+  days: int = 180,
+  horizon: int = 10,
+  backfill: bool = True,
+):
+  """Historical outlook, regime, and macro series for charts."""
+  try:
+    return get_history(db, days=days, horizon=horizon, ensure_backfill=backfill)
+  except Exception as exc:
+    logger.exception("History endpoint failed")
     raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

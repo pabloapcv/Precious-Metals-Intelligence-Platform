@@ -6,6 +6,7 @@ import { useAppData } from './hooks/useAppData'
 import { TerminalLayout } from './layout/TerminalLayout'
 import { CommandCenter } from './sections/CommandCenter'
 import { Explainability } from './sections/Explainability'
+import { HistoryCharts } from './sections/HistoryCharts'
 import { ModelValidation } from './sections/ModelValidation'
 import { PortfolioInstitutional } from './sections/PortfolioInstitutional'
 import { ResearchDesk } from './sections/ResearchDesk'
@@ -19,12 +20,15 @@ export default function App() {
     dashboard,
     research,
     explain,
+    history,
+    historyLoading,
     loading,
     refreshing,
     error,
     pipelineRunning,
     toast,
     fetchAll,
+    fetchHistory,
     runPipeline,
     dismissToast,
   } = useAppData()
@@ -60,7 +64,7 @@ export default function App() {
 
       {dashboard.data_status.pipeline_needed && (
         <div className="banner global-banner" role="status">
-          <span>Data stale — run pipeline to refresh market data and retrain models (~2 min).</span>
+          <span>Data stale — run pipeline to refresh market data and train models (~2 min).</span>
           <button type="button" className="btn btn-sm" onClick={runPipeline} disabled={pipelineRunning}>Run pipeline</button>
         </div>
       )}
@@ -91,6 +95,21 @@ export default function App() {
           {workspace === 'portfolio' && research && <PortfolioInstitutional research={research} />}
           {workspace === 'research' && research && (
             <ResearchDesk dashboard={dashboard} research={research} />
+          )}
+          {workspace === 'history' && history && (
+            <HistoryCharts
+              history={history}
+              loading={historyLoading}
+              onReload={(days, horizon) => fetchHistory(days, horizon, false)}
+            />
+          )}
+          {workspace === 'history' && !history && (
+            <div className="workspace">
+              <div className="empty-state">
+                <p>{historyLoading ? 'Building historical outlook series…' : 'History unavailable.'}</p>
+                <p className="empty-hint">First load backfills prediction history from trained models.</p>
+              </div>
+            </div>
           )}
           {workspace === 'explain' && explain && (
             <Explainability explain={explain} dashboard={dashboard} />

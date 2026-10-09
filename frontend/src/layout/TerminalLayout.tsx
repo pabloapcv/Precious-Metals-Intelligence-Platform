@@ -6,6 +6,7 @@ const WORKSPACES: { id: WorkspaceId; label: string; code: string }[] = [
   { id: 'models', label: 'Model Validation', code: 'MDL' },
   { id: 'portfolio', label: 'Portfolio', code: 'PTF' },
   { id: 'research', label: 'Research Desk', code: 'RSH' },
+  { id: 'history', label: 'Historical Outlook', code: 'HST' },
   { id: 'explain', label: 'How It Works', code: 'XPL' },
   { id: 'risk', label: 'Risk Monitor', code: 'RSK' },
 ]

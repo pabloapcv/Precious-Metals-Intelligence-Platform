@@ -2288,3 +2288,16 @@ main { display: flex; flex-direction: column; gap: 2.5rem; }
   border-radius: var(--radius-sm);
 }
 
+.history-filters {
+  flex-wrap: wrap;
+}
+
+.history-footnote {
+  margin-top: 1.25rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.kpi-value.negative-text { color: var(--red); }
+

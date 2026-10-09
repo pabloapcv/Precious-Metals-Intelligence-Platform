@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { DashboardData, ExplainData, ResearchData } from '../types'
+import type { DashboardData, ExplainData, HistoryData, ResearchData } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? ''
 
@@ -7,11 +7,25 @@ export function useAppData() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [research, setResearch] = useState<ResearchData | null>(null)
   const [explain, setExplain] = useState<ExplainData | null>(null)
+  const [history, setHistory] = useState<HistoryData | null>(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pipelineRunning, setPipelineRunning] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const fetchHistory = useCallback(async (days = 180, horizon = 10, backfill = true) => {
+    setHistoryLoading(true)
+    try {
+      const res = await fetch(
+        `${API_URL}/api/v1/history?days=${days}&horizon=${horizon}&backfill=${backfill}`,
+      )
+      if (res.ok) setHistory(await res.json())
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
 
   const fetchAll = useCallback(async (isRefresh = false) => {
     try {
@@ -27,13 +41,11 @@ export function useAppData() {
       if (!dashRes.ok) throw new Error(await parseError(dashRes))
       setDashboard(await dashRes.json())
 
-      if (researchRes.ok) {
-        setResearch(await researchRes.json())
-      }
+      if (researchRes.ok) setResearch(await researchRes.json())
+      if (explainRes.ok) setExplain(await explainRes.json())
 
-      if (explainRes.ok) {
-        setExplain(await explainRes.json())
-      }
+      // History can take longer on first backfill — load after core data
+      await fetchHistory(180, 10, true)
 
       setError(null)
     } catch (e) {
@@ -42,7 +54,7 @@ export function useAppData() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [fetchHistory])
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
@@ -73,12 +85,15 @@ export function useAppData() {
     dashboard,
     research,
     explain,
+    history,
+    historyLoading,
     loading,
     refreshing,
     error,
     pipelineRunning,
     toast,
     fetchAll,
+    fetchHistory,
     runPipeline,
     dismissToast: () => setToast(null),
   }

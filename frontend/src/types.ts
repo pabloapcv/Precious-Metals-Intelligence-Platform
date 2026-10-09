@@ -138,7 +138,7 @@ export interface ResearchData {
   }>
 }
 
-export type WorkspaceId = 'command' | 'signals' | 'models' | 'portfolio' | 'research' | 'risk' | 'explain'
+export type WorkspaceId = 'command' | 'signals' | 'models' | 'portfolio' | 'research' | 'risk' | 'explain' | 'history'
 export type SortKey = 'rank' | 'alpha' | 'prob' | 'entity' | 'signal'
 export type TierFilter = 'all' | 'senior' | 'mid' | 'junior' | 'royalty' | 'gold'
 
@@ -184,4 +184,42 @@ export interface ExplainData {
   gold_outlook_explanation: { bullish_pct: number; plain: string }
   macro_inputs: Record<string, string | number | null>
   transparency_note: string
+}
+
+export interface HistoryPoint {
+  date: string
+  prob_outperform_gold: number | null
+  prob_beat_gdx: number | null
+  expected_alpha: number | null
+  expected_return: number | null
+  bullish_pct: number
+}
+
+export interface HistoryData {
+  as_of: string
+  horizon_days: number
+  lookback_days: number
+  backfilled_rows: number
+  gold_outlook: HistoryPoint[]
+  gold_stats: {
+    latest: number
+    min: number
+    max: number
+    avg: number
+    change: number
+    n_points: number
+  } | null
+  entity_outlook: Record<string, {
+    label: string
+    tier: string
+    series: HistoryPoint[]
+  }>
+  regime_history: Array<{
+    date: string
+    regime_id: number
+    regime_name: string
+    confidence: number
+  }>
+  macro_series: Record<string, Array<{ date: string; close: number | null }>>
+  available_entities: string[]
 }
