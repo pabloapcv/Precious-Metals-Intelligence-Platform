@@ -12,7 +12,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from pmip.config import get_settings
-from pmip.constants import HORIZONS, PREDICTION_TARGETS
+from pmip.constants import HORIZON_DESCRIPTIONS, HORIZONS, PREDICTION_TARGETS, horizon_label
 from pmip.db.models import MacroDaily, MarketRegime, ModelPrediction, PortfolioRecommendation
 from pmip.portfolio.optimizer import _get_return_matrix
 from pmip.research.knowledge_graph import REGIME_HYPOTHESES, get_hypotheses_for_target
@@ -72,12 +72,18 @@ def get_macro_series(session: Session, symbols: list[str] | None = None, days: i
 
 
 def get_signal_book(session: Session, horizon: int = 10) -> list[dict]:
+  """One row per name: the latest forecast for this horizon, not the history."""
   rows = (
     session.query(ModelPrediction)
     .filter(ModelPrediction.horizon_days == horizon)
-    .order_by(ModelPrediction.expected_alpha.desc())
+    .order_by(ModelPrediction.date.desc(), ModelPrediction.id.desc())
     .all()
   )
+  latest: dict[str, ModelPrediction] = {}
+  for row in rows:
+    if row.entity not in latest:
+      latest[row.entity] = row
+  rows = sorted(latest.values(), key=lambda row: _safe_float(row.expected_alpha, 0.0), reverse=True)
   return [
     {
       "entity": r.entity,
@@ -241,6 +247,67 @@ def get_research_hypotheses() -> list[dict]:
   return hypotheses
 
 
+def load_purged_evidence() -> dict | None:
+  """Load the citeable purged walk-forward study from ``docs/research/results.json``."""
+  from pmip.config import PROJECT_ROOT
+
+  path = PROJECT_ROOT / "docs" / "research" / "results.json"
+  if not path.exists():
+    return None
+  try:
+    import json
+
+    payload = json.loads(path.read_text())
+  except Exception:
+    return None
+
+  studies = []
+  for study in payload.get("studies") or []:
+    if study.get("error"):
+      continue
+    metrics = study.get("metrics") or {}
+    backtest = study.get("backtest") or {}
+    hgb = metrics.get("gradient_boosting") or {}
+    books = []
+    for name, row in backtest.items():
+      if not isinstance(row, dict):
+        continue
+      books.append({
+        "name": name,
+        "final_wealth": row.get("final_wealth"),
+        "total_return": row.get("total_return"),
+        "max_drawdown": row.get("max_drawdown"),
+        "hit_rate": row.get("hit_rate"),
+      })
+    studies.append({
+      "name": study.get("name"),
+      "question": study.get("question"),
+      "entity": study.get("entity"),
+      "benchmark": study.get("benchmark"),
+      "horizon_days": study.get("horizon_days"),
+      "embargo_days": study.get("embargo_days"),
+      "n_oos": study.get("n_oos"),
+      "claim": study.get("claim"),
+      "auc": hgb.get("auc"),
+      "accuracy": hgb.get("accuracy"),
+      "books": books,
+    })
+  if not studies:
+    return None
+  return {
+    "generated_at": payload.get("generated_at"),
+    "horizon_days": payload.get("horizon_days", 10),
+    "cost_bps": payload.get("cost_bps", 10),
+    "studies": studies,
+    "claims": payload.get("claims") or [],
+    "note": (
+      "Cite this purged table for whether the gold-budget / miner-sleeve rules "
+      "helped after costs. The model catalog below is the operational screen; "
+      "history charts and paper books now use as-of scores with the same embargo grammar."
+    ),
+  }
+
+
 def get_research_desk(session: Session) -> dict:
   """Combined institutional research payload."""
   catalog = get_model_catalog(session)
@@ -264,7 +331,12 @@ def get_research_desk(session: Session) -> dict:
     "model_summary": {
       "n_models": len(catalog),
       "mean_auc": round(float(np.mean(avg_auc)), 3) if avg_auc else None,
-      "horizons": horizons_available or [10],
+      "horizons": horizons_available or list(HORIZONS),
+      "horizon_labels": {str(h): horizon_label(h) for h in (horizons_available or list(HORIZONS))},
+      "horizon_descriptions": {
+        str(h): HORIZON_DESCRIPTIONS.get(h, f"{h} trading days")
+        for h in (horizons_available or list(HORIZONS))
+      },
       "backends": sorted({m["backend"] for m in catalog}),
     },
     "portfolio_analytics": get_portfolio_analytics(session),
@@ -279,4 +351,11 @@ def get_research_desk(session: Session) -> dict:
       }
       for r in REGIME_HYPOTHESES
     ],
+    "purged_evidence": load_purged_evidence(),
+    "integrity": {
+      "history_scoring": "asof_embargo",
+      "paper_scoring": "asof_embargo",
+      "live_scoring": "full_sample_registry",
+      "cite": "purged_evidence",
+    },
   }

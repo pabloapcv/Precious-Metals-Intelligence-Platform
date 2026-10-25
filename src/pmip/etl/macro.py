@@ -103,20 +103,70 @@ def upsert_macro_daily(session: Session, df: pd.DataFrame) -> int:
   return len(records)
 
 
-def run_macro_etl(session: Session, lookback_days: int = 365 * 5) -> dict[str, int]:
+def run_macro_etl(
+  session: Session,
+  lookback_days: int = 365 * 5,
+  on_progress=None,
+) -> dict[str, int]:
   """Ingest all macro symbols for the lookback window."""
   end = date.today()
   start = end - timedelta(days=lookback_days)
   results = {}
-  for sym in MACRO_SYMBOLS:
+  total = len(MACRO_SYMBOLS)
+  for index, sym in enumerate(MACRO_SYMBOLS, start=1):
+    if on_progress is not None:
+      on_progress(
+        "etl",
+        status="running",
+        action="Downloading close",
+        item=f"{sym.symbol} · {sym.name}",
+        detail=f"Downloading {sym.symbol} ({sym.name})",
+        done=index - 1,
+        total=total,
+        unit="symbols",
+        log=False,
+      )
     try:
       df = fetch_macro_series(sym, start, end)
       count = upsert_macro_daily(session, df)
       results[sym.symbol] = count
       logger.info("Ingested %d rows for %s", count, sym.symbol)
+      if on_progress is not None:
+        on_progress(
+          "etl",
+          status="running",
+          action="Saved close",
+          item=f"{sym.symbol} · {count:,} rows",
+          detail=f"Saved {sym.symbol}: {count:,} rows",
+          done=index,
+          total=total,
+          unit="symbols",
+        )
     except Exception as e:
       logger.error("Failed to ingest %s: %s", sym.symbol, e)
       results[sym.symbol] = 0
+      if on_progress is not None:
+        on_progress(
+          "etl",
+          status="running",
+          action="Download failed",
+          item=sym.symbol,
+          detail=f"Failed {sym.symbol}: {e}",
+          done=index,
+          total=total,
+          unit="symbols",
+        )
+  if on_progress is not None:
+    on_progress(
+      "etl",
+      status="running",
+      action="Deriving real yields",
+      item="US10Y_REAL",
+      detail="Writing derived real-yield series if FRED TIPS is missing",
+      done=total,
+      total=total,
+      unit="symbols",
+    )
   _write_derived_real_yields(session)
   return results
 

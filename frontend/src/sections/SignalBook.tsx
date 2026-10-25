@@ -1,7 +1,8 @@
 import { Fragment, useMemo, useState } from 'react'
 import type { ResearchData, SortKey, TierFilter } from '../types'
-import { METRIC_HELP, exportCsv, fmtPct, signalClass } from '../utils'
+import { ColumnGuide } from '../components/ColumnGuide'
 import { Tooltip } from '../components/Tooltip'
+import { METRIC_HELP, exportCsv, fmtPct, horizonLabel, signalClass } from '../utils'
 
 interface SignalBookProps {
   research: ResearchData
@@ -10,8 +11,10 @@ interface SignalBookProps {
 export function SignalBook({ research }: SignalBookProps) {
   const horizons = research.model_summary.horizons.length
     ? research.model_summary.horizons
-    : [10]
+    : [5, 10, 20, 63, 126]
+  const labels = research.model_summary.horizon_labels
   const [horizon, setHorizon] = useState(horizons.includes(10) ? 10 : horizons[0])
+  const hLabel = horizonLabel(horizon, labels)
   const [query, setQuery] = useState('')
   const [tier, setTier] = useState<TierFilter>('all')
   const [sortKey, setSortKey] = useState<SortKey>('alpha')
@@ -67,8 +70,11 @@ export function SignalBook({ research }: SignalBookProps) {
     <div className="workspace">
       <div className="workspace-head">
         <div>
-          <h2 className="workspace-title">Signal Book</h2>
-          <p className="workspace-sub">Tradeable alpha signals · multi-horizon ML outputs · exportable</p>
+          <h2 className="workspace-title">Signal Book · {hLabel}</h2>
+          <p className="workspace-sub">
+            Each row is that name’s latest forecast for the next {horizon} trading days ({hLabel}).
+            {signals[0]?.date ? ` As of ${signals[0].date}.` : ''}
+          </p>
         </div>
         <div className="workspace-actions">
           <div className="horizon-tabs" role="tablist">
@@ -81,7 +87,7 @@ export function SignalBook({ research }: SignalBookProps) {
                 className={`horizon-tab ${horizon === h ? 'active' : ''}`}
                 onClick={() => setHorizon(h)}
               >
-                {h}d
+                {horizonLabel(h, labels)}
               </button>
             ))}
           </div>
@@ -90,6 +96,32 @@ export function SignalBook({ research }: SignalBookProps) {
           </button>
         </div>
       </div>
+
+      <section className="method-note" aria-label="How these forecasts are produced">
+        <h3>How this {hLabel} table is produced</h3>
+        <ol>
+          <li>
+            Daily closing prices are downloaded from Yahoo Finance for each future, ETF, and stock, and stored in the warehouse.
+            Treasury yields come from FRED when a key is set. Without one, the real yield is the 10-year yield minus 2.25 percentage points.
+          </li>
+          <li>
+            Those closes are turned into the model’s inputs: trailing returns, volatility, gold versus the S&amp;P 500, gold versus copper, the real yield, and the dollar’s change over 20 trading days.
+          </li>
+          <li>
+            The {hLabel} tab loads a separate saved model for each name, tagged <span className="mono">{signals[0]?.model_version ?? `h${horizon}`}</span>.
+            It was trained to answer one question: did this name’s return over the next {horizon} trading days beat gold futures (GC=F)?
+            A second model on the same inputs estimates the price change itself.
+          </li>
+          <li>
+            Each row is that pair of models scored once, on the newest feature day{signals[0]?.date ? ` (${signals[0].date})` : ''}.
+            Switching tabs (5d / 10d / 1m / 3m / 6m) swaps in the other saved model. Older scores are not averaged into this table.
+          </li>
+          <li>
+            P(Gold) is the classifier’s probability. Expected return is the second model’s price change.
+            Expected alpha subtracts a flat 1% from that price change. P(GDX)* multiplies P(Gold) by 0.95. The signal word is a cutoff on the probability and the alpha, not a third model.
+          </li>
+        </ol>
+      </section>
 
       <div className="toolbar">
         <input
@@ -100,7 +132,7 @@ export function SignalBook({ research }: SignalBookProps) {
           onChange={(e) => setQuery(e.target.value)}
         />
         <div className="filter-pills">
-          {(['all', 'gold', 'senior', 'mid', 'junior', 'royalty'] as TierFilter[]).map((t) => (
+          {(['all', 'gold', 'silver', 'pgm', 'copper', 'base', 'uranium', 'senior', 'mid', 'junior', 'royalty', 'leveraged'] as TierFilter[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -113,28 +145,37 @@ export function SignalBook({ research }: SignalBookProps) {
         </div>
       </div>
 
+      <ColumnGuide items={[
+        { term: 'P(Gold)', text: METRIC_HELP.prob },
+        { term: 'P(GDX)*', text: METRIC_HELP.probGdx },
+        { term: 'Expected alpha', text: METRIC_HELP.alpha },
+        { term: 'Expected return', text: METRIC_HELP.expectedReturn },
+        { term: 'Signal', text: METRIC_HELP.signal },
+        { term: 'Model', text: METRIC_HELP.model },
+      ]} />
+
       <div className="card table-card">
         <div className="table-wrap">
           <table className="data-table institutional">
             <thead>
               <tr>
-                <th><button type="button" className="th-btn" onClick={() => toggleSort('entity')}>Ticker{sortInd('entity')}</button></th>
-                <th>Name</th>
-                <th>Tier</th>
-                <th><button type="button" className="th-btn" onClick={() => toggleSort('signal')}>Signal{sortInd('signal')}</button></th>
-                <th className="num"><button type="button" className="th-btn" onClick={() => toggleSort('prob')}>P(Gold){sortInd('prob')}</button></th>
-                <th className="num">P(GDX)</th>
-                <th className="num"><Tooltip label={METRIC_HELP.alpha}><span>Exp α{sortInd('alpha')}</span></Tooltip></th>
-                <th className="num">Exp Ret</th>
-                <th>Model</th>
+                <th><Tooltip label={METRIC_HELP.ticker}><button type="button" className="th-btn" onClick={() => toggleSort('entity')}>Ticker{sortInd('entity')}</button></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.name}><span>Name</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.tier}><span>Tier</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.signal}><button type="button" className="th-btn" onClick={() => toggleSort('signal')}>Signal{sortInd('signal')}</button></Tooltip></th>
+                <th className="num"><Tooltip label={METRIC_HELP.prob}><button type="button" className="th-btn" onClick={() => toggleSort('prob')}>P(Gold){sortInd('prob')}</button></Tooltip></th>
+                <th className="num"><Tooltip label={METRIC_HELP.probGdx}><span>P(GDX)*</span></Tooltip></th>
+                <th className="num"><Tooltip label={METRIC_HELP.alpha}><button type="button" className="th-btn" onClick={() => toggleSort('alpha')}>Expected alpha{sortInd('alpha')}</button></Tooltip></th>
+                <th className="num"><Tooltip label={METRIC_HELP.expectedReturn}><span>Expected return</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.model}><span>Model</span></Tooltip></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody key={horizon}>
               {filtered.length === 0 ? (
-                <tr><td colSpan={9} className="empty-row">No signals for this horizon — run pipeline.</td></tr>
+                <tr><td colSpan={9} className="empty-row">No {horizon}-day forecasts yet. Run the pipeline.</td></tr>
               ) : (
                 filtered.map((s) => (
-                  <tr key={`${s.entity}-${s.horizon_days}`}>
+                  <tr key={`${s.entity}-${s.horizon_days}-${s.date}`}>
                     <td className="mono gold-text">{s.entity}</td>
                     <td>{s.label}</td>
                     <td><span className="tier-badge">{s.tier}</span></td>
@@ -152,7 +193,11 @@ export function SignalBook({ research }: SignalBookProps) {
             </tbody>
           </table>
         </div>
-        <div className="table-footer">{filtered.length} signals · horizon {horizon}d</div>
+        <div className="table-footer">
+          {filtered.length} names · next {horizon} trading days
+          {signals[0]?.date ? ` · forecast date ${signals[0].date}` : ''}
+          {' · '}P(GDX)* is 95% of P(Gold), not its own model. Expected alpha subtracts a flat 1% hurdle.
+        </div>
       </div>
     </div>
   )

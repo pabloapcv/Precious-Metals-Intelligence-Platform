@@ -8,8 +8,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { Tooltip } from '../components/Tooltip'
 import type { DashboardData, ResearchData } from '../types'
-import { SERIES_COLORS, SERIES_LABELS } from '../utils'
+import { METRIC_HELP, SERIES_COLORS, SERIES_LABELS } from '../utils'
 
 interface ResearchDeskProps {
   dashboard: DashboardData
@@ -35,7 +36,9 @@ export function ResearchDesk({ dashboard, research }: ResearchDeskProps) {
 
       <div className="grid grid-2">
         <div className="card chart-card">
-          <div className="card-title">Macro Cross-Asset (252d)</div>
+          <div className="card-title">
+            <Tooltip label="Each line is rebased so you can see gold, miners, and VIX on one chart over about one trading year (252 sessions). It is price history, not a forecast."><span>Macro Cross-Asset (252d)</span></Tooltip>
+          </div>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a3548" vertical={false} />
@@ -52,7 +55,9 @@ export function ResearchDesk({ dashboard, research }: ResearchDeskProps) {
         </div>
 
         <div className="card chart-card">
-          <div className="card-title">Regime Confidence History</div>
+          <div className="card-title">
+            <Tooltip label={METRIC_HELP.regime}><span>Regime Confidence History</span></Tooltip>
+          </div>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={regimeChart}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a3548" vertical={false} />
@@ -72,7 +77,9 @@ export function ResearchDesk({ dashboard, research }: ResearchDeskProps) {
 
       <div className="grid grid-2">
         <div className="card">
-          <div className="card-title">Regime Definitions</div>
+          <div className="card-title">
+            <Tooltip label="Each environment has a fixed gold bias and a fixed miner bias. Those words are labels for the state, not a forecast of the next return."><span>Regime Definitions</span></Tooltip>
+          </div>
           <div className="regime-def-list">
             {research.regime_definitions.map((r) => (
               <div key={r.id} className="regime-def-item">

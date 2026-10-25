@@ -10,6 +10,7 @@ import pandas as pd
 import ta
 from sqlalchemy.orm import Session
 
+from pmip.constants import ALL_MINERS
 from pmip.db.models import FeatureDaily, MacroDaily, MinerQuarterly
 from pmip.db.upsert import upsert
 
@@ -41,7 +42,10 @@ def engineer_price_features(prices: pd.Series, entity: str) -> pd.DataFrame:
   features[f"{entity}__ret_5d"] = _returns(prices, 5)
   features[f"{entity}__ret_10d"] = _returns(prices, 10)
   features[f"{entity}__ret_20d"] = _returns(prices, 20)
+  features[f"{entity}__ret_63d"] = _returns(prices, 63)
+  features[f"{entity}__ret_126d"] = _returns(prices, 126)
   features[f"{entity}__vol_20d"] = _volatility(prices, 20)
+  features[f"{entity}__vol_63d"] = _volatility(prices, 63)
   features[f"{entity}__dist_200dma"] = _distance_from_dma(prices, 200)
   features[f"{entity}__momentum_60d"] = _returns(prices, 60)
   features[f"{entity}__zscore_60d"] = _zscore(prices, 60)
@@ -150,7 +154,11 @@ def upsert_features(session: Session, feature_df: pd.DataFrame, entity: str) -> 
   return len(records)
 
 
-def run_feature_engineering(session: Session, entities: list[str] | None = None) -> int:
+def run_feature_engineering(
+  session: Session,
+  entities: list[str] | None = None,
+  on_progress=None,
+) -> int:
   """Compute and store all engineered features."""
   rows = session.query(MacroDaily).order_by(MacroDaily.date).all()
   if not rows:
@@ -162,18 +170,53 @@ def run_feature_engineering(session: Session, entities: list[str] | None = None)
   wide.index = pd.to_datetime(wide.index)
 
   total = 0
-  target_entities = entities or list(wide.columns)
-  for entity in target_entities:
-    if entity in wide.columns:
-      feat = engineer_price_features(wide[entity].dropna(), entity)
-      total += upsert_features(session, feat, entity)
+  target_entities = [e for e in (entities or list(wide.columns)) if e in wide.columns]
+  steps = len(target_entities) + 2  # price features + cross-asset + miner block
 
+  def _note(action: str, item: str, detail: str, done: int) -> None:
+    if on_progress is None:
+      return
+    on_progress(
+      "features",
+      status="running",
+      action=action,
+      item=item,
+      detail=detail,
+      done=done,
+      total=steps,
+      unit="blocks",
+    )
+
+  for index, entity in enumerate(target_entities, start=1):
+    _note("Price features", entity, f"Returns, volatility, RSI/MACD for {entity}", index - 1)
+    feat = engineer_price_features(wide[entity].dropna(), entity)
+    total += upsert_features(session, feat, entity)
+
+  _note("Cross-asset features", "MACRO", "Gold ratios, real yield, dollar trend", len(target_entities))
   cross = engineer_cross_asset_features(wide)
   total += upsert_features(session, cross, "MACRO")
 
-  miner_tickers = [c for c in wide.columns if c in ("NEM", "AEM", "B", "KGC", "AGI", "GDX", "GDXJ")]
+  miner_tickers = [c for c in wide.columns if c in {m["ticker"] for m in ALL_MINERS} | {"GDX", "GDXJ", "SIL", "COPX"}]
+  _note(
+    "Miner features",
+    ", ".join(miner_tickers[:6]) + ("…" if len(miner_tickers) > 6 else ""),
+    f"Production surprises and beta-to-gold for {len(miner_tickers)} names",
+    len(target_entities) + 1,
+  )
   miner_feat = engineer_miner_features(wide, miner_tickers, session)
   total += upsert_features(session, miner_feat, "MINERS")
+
+  if on_progress is not None:
+    on_progress(
+      "features",
+      status="running",
+      action="Feature store written",
+      item=f"{total:,} values",
+      detail=f"Stored {total:,} feature values",
+      done=steps,
+      total=steps,
+      unit="blocks",
+    )
 
   logger.info("Engineered %d feature values", total)
   return total

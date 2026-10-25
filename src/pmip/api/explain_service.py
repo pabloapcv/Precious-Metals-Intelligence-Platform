@@ -10,7 +10,12 @@ from sqlalchemy.orm import Session
 
 from pmip.agents.research import run_all_agents
 from pmip.api.macro_service import build_macro_snapshot
-from pmip.config import get_settings
+from pmip.api.research_service import (
+  _safe_float,
+  get_model_catalog,
+  get_portfolio_analytics,
+  get_signal_book,
+)
 from pmip.constants import ALL_MINERS, HORIZONS, PREDICTION_TARGETS
 from pmip.db.models import (
   CentralBankPurchase,
@@ -24,13 +29,8 @@ from pmip.db.models import (
   PortfolioRecommendation,
 )
 from pmip.models.regime import get_current_regime
+from pmip.research.evaluation import claim_inventory
 from pmip.research.knowledge_graph import CORE_EDGES, build_knowledge_graph
-from pmip.api.research_service import (
-  _safe_float,
-  get_model_catalog,
-  get_portfolio_analytics,
-  get_signal_book,
-)
 
 
 PIPELINE_STEPS = [
@@ -383,11 +383,13 @@ def get_explainability(session: Session) -> dict:
         "Each regime has documented gold and miner biases used to contextualize signals."
       ),
     },
+    "claims": claim_inventory(),
     "gold_outlook_explanation": {
       "bullish_pct": round(_safe_float(gold_pred.prob_outperform_gold if gold_pred else None, 0.55) * 100),
       "plain": (
-        "Gold bullish % is the model's estimated probability that GLD outperforms its benchmark "
-        "(gold futures) over the next 10 trading days, based on today's feature vector."
+        "Gold bullish % is the chance the model assigns to GLD beating gold futures over the next "
+        "10 trading days. That is a tracking spread, not the chance the gold price rises. "
+        "The gold-budget decision lives on Gold vs Markets."
       ),
     },
     "macro_inputs": {

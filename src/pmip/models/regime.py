@@ -128,7 +128,22 @@ def upsert_regimes(session: Session, regime_df: pd.DataFrame, model_version: str
   return len(records)
 
 
-def run_regime_detection(session: Session) -> int:
+def run_regime_detection(session: Session, on_progress=None) -> int:
+  def _note(action: str, item: str, detail: str, done: int, total: int = 3) -> None:
+    if on_progress is None:
+      return
+    on_progress(
+      "regime",
+      status="running",
+      action=action,
+      item=item,
+      detail=detail,
+      done=done,
+      total=total,
+      unit="steps",
+    )
+
+  _note("Loading prices", "MacroDaily", "Pivoting closes into a regime feature panel", 0)
   rows = session.query(MacroDaily).order_by(MacroDaily.date).all()
   if not rows:
     return 0
@@ -136,9 +151,12 @@ def run_regime_detection(session: Session) -> int:
   wide = df.pivot(index="date", columns="symbol", values="close").sort_index()
   wide.index = pd.to_datetime(wide.index)
 
+  _note("Building features", "returns / vol / rates", "Constructing the HMM observation matrix", 1)
   feat = _build_regime_features(wide)
+  _note("Fitting HMM", f"{len(feat):,} days", "Estimating latent macro regimes", 2)
   regimes = detect_regimes_hmm(feat)
   count = upsert_regimes(session, regimes)
+  _note("Regimes saved", f"{count:,} days", f"Wrote {count:,} regime labels", 3)
   logger.info("Detected regimes for %d days", count)
   return count
 

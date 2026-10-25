@@ -1,0 +1,999 @@
+{
+  "generated_at": "2026-10-14T23:05:59+00:00",
+  "horizon_days": 10,
+  "cost_bps": 10,
+  "studies": [
+    {
+      "name": "gold_budget",
+      "question": "Should the next 10-day holding be gold or the S&P 500?",
+      "entity": "Gold futures",
+      "benchmark": "S&P 500",
+      "horizon_days": 10,
+      "embargo_days": 10,
+      "cost_bps": 10,
+      "n_samples": 537,
+      "n_oos": 41,
+      "train_window": 120,
+      "positive_rate": 0.5609756097560976,
+      "metrics": {
+        "gradient_boosting": {
+          "auc": 0.567632850241546,
+          "accuracy": 0.5365853658536586,
+          "n": 41
+        },
+        "logistic_macro": {
+          "auc": 0.5289855072463767,
+          "accuracy": 0.6341463414634146,
+          "n": 41
+        },
+        "momentum": {
+          "auc": 0.5555555555555555,
+          "accuracy": 0.5853658536585366,
+          "n": 41
+        },
+        "always_entity": {
+          "auc": 0.5,
+          "accuracy": 0.5609756097560976,
+          "n": 41
+        }
+      },
+      "calibration": [
+        {
+          "bin_low": 0.0,
+          "bin_high": 0.2,
+          "n": 10,
+          "mean_predicted": 0.111,
+          "realized_rate": 0.6
+        },
+        {
+          "bin_low": 0.2,
+          "bin_high": 0.4,
+          "n": 5,
+          "mean_predicted": 0.298,
+          "realized_rate": 0.6
+        },
+        {
+          "bin_low": 0.4,
+          "bin_high": 0.6,
+          "n": 7,
+          "mean_predicted": 0.485,
+          "realized_rate": 0.429
+        },
+        {
+          "bin_low": 0.6,
+          "bin_high": 0.8,
+          "n": 9,
+          "mean_predicted": 0.714,
+          "realized_rate": 0.444
+        },
+        {
+          "bin_low": 0.8,
+          "bin_high": 1.0,
+          "n": 10,
+          "mean_predicted": 0.91,
+          "realized_rate": 0.7
+        }
+      ],
+      "stability": {
+        "agreement": 1.0,
+        "n": 41,
+        "full_entity_rate": 0.683,
+        "dropped_entity_rate": 0.683,
+        "features_full": [
+          "AEM__ret_20d",
+          "AEM__vol_20d",
+          "AGI__ret_20d",
+          "AGI__vol_20d",
+          "B__ret_20d",
+          "B__vol_20d",
+          "CL=F__ret_20d",
+          "CL=F__vol_20d",
+          "DX-Y.NYB__ret_20d",
+          "DX-Y.NYB__vol_20d",
+          "GC=F__ret_20d",
+          "GC=F__vol_20d"
+        ],
+        "features_dropped_set": [
+          "AEM__ret_20d",
+          "AEM__vol_20d",
+          "AGI__ret_20d",
+          "AGI__vol_20d",
+          "B__ret_20d",
+          "B__vol_20d",
+          "CL=F__ret_20d",
+          "CL=F__vol_20d",
+          "DX-Y.NYB__ret_20d",
+          "DX-Y.NYB__vol_20d",
+          "GC=F__ret_20d",
+          "GC=F__vol_20d"
+        ],
+        "note": "Agreement is the share of dates with the same binary call after real-yield and dollar features are removed. Entity rate is how often each version chooses the entity. Agreement near 100% with an entity rate near 0% or 100% means the model almost never switches."
+      },
+      "backtest": {
+        "gradient_boosting": {
+          "final_wealth": 1.2612,
+          "total_return": 0.2612,
+          "max_drawdown": -0.1541,
+          "hit_rate": 0.5366,
+          "avg_period_return": 0.0064,
+          "n_periods": 41
+        },
+        "logistic_macro": {
+          "final_wealth": 1.5938,
+          "total_return": 0.5938,
+          "max_drawdown": -0.1289,
+          "hit_rate": 0.6341,
+          "avg_period_return": 0.0122,
+          "n_periods": 41
+        },
+        "momentum": {
+          "final_wealth": 1.6821,
+          "total_return": 0.6821,
+          "max_drawdown": -0.1289,
+          "hit_rate": 0.5854,
+          "avg_period_return": 0.0135,
+          "n_periods": 41
+        },
+        "always_entity": {
+          "final_wealth": 1.5193,
+          "total_return": 0.5193,
+          "max_drawdown": -0.2023,
+          "hit_rate": null,
+          "avg_period_return": 0.0112,
+          "n_periods": 41
+        },
+        "always_benchmark": {
+          "final_wealth": 1.2688,
+          "total_return": 0.2688,
+          "max_drawdown": -0.1365,
+          "hit_rate": null,
+          "avg_period_return": 0.0061,
+          "n_periods": 41
+        }
+      },
+      "curve": [
+        {
+          "date": "2025-02-04",
+          "gradient_boosting": 1.021,
+          "logistic_macro": 1.0176,
+          "momentum": 1.021,
+          "always_entity": 1.021,
+          "always_benchmark": 1.0176
+        },
+        {
+          "date": "2025-02-20",
+          "gradient_boosting": 0.9567,
+          "logistic_macro": 1.0064,
+          "momentum": 1.0108,
+          "always_entity": 1.0108,
+          "always_benchmark": 0.9546
+        },
+        {
+          "date": "2025-03-06",
+          "gradient_boosting": 0.9941,
+          "logistic_macro": 1.0467,
+          "momentum": 1.0513,
+          "always_entity": 1.0513,
+          "always_benchmark": 0.942
+        },
+        {
+          "date": "2025-03-20",
+          "gradient_boosting": 1.0195,
+          "logistic_macro": 1.0735,
+          "momentum": 1.0782,
+          "always_entity": 1.0782,
+          "always_benchmark": 0.8977
+        },
+        {
+          "date": "2025-04-03",
+          "gradient_boosting": 1.087,
+          "logistic_macro": 1.1446,
+          "momentum": 1.1496,
+          "always_entity": 1.1496,
+          "always_benchmark": 0.8787
+        },
+        {
+          "date": "2025-04-17",
+          "gradient_boosting": 1.0592,
+          "logistic_macro": 1.231,
+          "momentum": 1.1202,
+          "always_entity": 1.1202,
+          "always_benchmark": 0.9459
+        },
+        {
+          "date": "2025-05-02",
+          "gradient_boosting": 1.0409,
+          "logistic_macro": 1.2898,
+          "momentum": 1.1726,
+          "always_entity": 1.1008,
+          "always_benchmark": 0.9911
+        },
+        {
+          "date": "2025-05-19",
+          "gradient_boosting": 1.035,
+          "logistic_macro": 1.2838,
+          "momentum": 1.1671,
+          "always_entity": 1.1565,
+          "always_benchmark": 0.9865
+        },
+        {
+          "date": "2025-06-03",
+          "gradient_boosting": 1.0431,
+          "logistic_macro": 1.2939,
+          "momentum": 1.1695,
+          "always_entity": 1.1667,
+          "always_benchmark": 0.9886
+        },
+        {
+          "date": "2025-06-17",
+          "gradient_boosting": 1.0287,
+          "logistic_macro": 1.2759,
+          "momentum": 1.1522,
+          "always_entity": 1.1506,
+          "always_benchmark": 1.029
+        },
+        {
+          "date": "2025-07-07",
+          "gradient_boosting": 1.0401,
+          "logistic_macro": 1.3002,
+          "momentum": 1.165,
+          "always_entity": 1.1724,
+          "always_benchmark": 1.0415
+        },
+        {
+          "date": "2025-07-21",
+          "gradient_boosting": 1.0441,
+          "logistic_macro": 1.3078,
+          "momentum": 1.1695,
+          "always_entity": 1.1793,
+          "always_benchmark": 1.0455
+        },
+        {
+          "date": "2025-08-05",
+          "gradient_boosting": 1.0627,
+          "logistic_macro": 1.2789,
+          "momentum": 1.1424,
+          "always_entity": 1.1532,
+          "always_benchmark": 1.0641
+        },
+        {
+          "date": "2025-08-19",
+          "gradient_boosting": 1.1492,
+          "logistic_macro": 1.3843,
+          "momentum": 1.1479,
+          "always_entity": 1.2483,
+          "always_benchmark": 1.0703
+        },
+        {
+          "date": "2025-09-03",
+          "gradient_boosting": 1.1752,
+          "logistic_macro": 1.4156,
+          "momentum": 1.1727,
+          "always_entity": 1.2765,
+          "always_benchmark": 1.0955
+        },
+        {
+          "date": "2025-09-17",
+          "gradient_boosting": 1.2308,
+          "logistic_macro": 1.4841,
+          "momentum": 1.2294,
+          "always_entity": 1.3382,
+          "always_benchmark": 1.1139
+        },
+        {
+          "date": "2025-10-01",
+          "gradient_boosting": 1.3269,
+          "logistic_macro": 1.5999,
+          "momentum": 1.3253,
+          "always_entity": 1.4426,
+          "always_benchmark": 1.1072
+        },
+        {
+          "date": "2025-10-15",
+          "gradient_boosting": 1.2634,
+          "logistic_macro": 1.5234,
+          "momentum": 1.262,
+          "always_entity": 1.3737,
+          "always_benchmark": 1.1437
+        },
+        {
+          "date": "2025-10-29",
+          "gradient_boosting": 1.3307,
+          "logistic_macro": 1.5131,
+          "momentum": 1.2534,
+          "always_entity": 1.4468,
+          "always_benchmark": 1.1371
+        },
+        {
+          "date": "2025-11-12",
+          "gradient_boosting": 1.3219,
+          "logistic_macro": 1.4942,
+          "momentum": 1.2464,
+          "always_entity": 1.4302,
+          "always_benchmark": 1.1307
+        },
+        {
+          "date": "2025-11-26",
+          "gradient_boosting": 1.3675,
+          "logistic_macro": 1.5472,
+          "momentum": 1.2894,
+          "always_entity": 1.4809,
+          "always_benchmark": 1.1454
+        },
+        {
+          "date": "2025-12-11",
+          "gradient_boosting": 1.4435,
+          "logistic_macro": 1.6332,
+          "momentum": 1.3611,
+          "always_entity": 1.5632,
+          "always_benchmark": 1.1502
+        },
+        {
+          "date": "2025-12-26",
+          "gradient_boosting": 1.4631,
+          "logistic_macro": 1.6554,
+          "momentum": 1.3796,
+          "always_entity": 1.5845,
+          "always_benchmark": 1.1581
+        },
+        {
+          "date": "2026-01-12",
+          "gradient_boosting": 1.4619,
+          "logistic_macro": 1.6541,
+          "momentum": 1.5195,
+          "always_entity": 1.7451,
+          "always_benchmark": 1.1583
+        },
+        {
+          "date": "2026-01-27",
+          "gradient_boosting": 1.4456,
+          "logistic_macro": 1.6356,
+          "momentum": 1.504,
+          "always_entity": 1.7274,
+          "always_benchmark": 1.1522
+        },
+        {
+          "date": "2026-02-10",
+          "gradient_boosting": 1.4451,
+          "logistic_macro": 1.6991,
+          "momentum": 1.5624,
+          "always_entity": 1.7945,
+          "always_benchmark": 1.1529
+        },
+        {
+          "date": "2026-02-25",
+          "gradient_boosting": 1.4097,
+          "logistic_macro": 1.6838,
+          "momentum": 1.5483,
+          "always_entity": 1.7783,
+          "always_benchmark": 1.1246
+        },
+        {
+          "date": "2026-03-11",
+          "gradient_boosting": 1.2376,
+          "logistic_macro": 1.48,
+          "momentum": 1.3609,
+          "always_entity": 1.5631,
+          "always_benchmark": 1.0941
+        },
+        {
+          "date": "2026-03-25",
+          "gradient_boosting": 1.3099,
+          "logistic_macro": 1.5664,
+          "momentum": 1.4076,
+          "always_entity": 1.6543,
+          "always_benchmark": 1.1327
+        },
+        {
+          "date": "2026-04-09",
+          "gradient_boosting": 1.2843,
+          "logistic_macro": 1.5358,
+          "momentum": 1.4662,
+          "always_entity": 1.622,
+          "always_benchmark": 1.1798
+        },
+        {
+          "date": "2026-04-23",
+          "gradient_boosting": 1.2808,
+          "logistic_macro": 1.5837,
+          "momentum": 1.5133,
+          "always_entity": 1.6175,
+          "always_benchmark": 1.2178
+        },
+        {
+          "date": "2026-05-07",
+          "gradient_boosting": 1.2984,
+          "logistic_macro": 1.6072,
+          "momentum": 1.5357,
+          "always_entity": 1.5597,
+          "always_benchmark": 1.2358
+        },
+        {
+          "date": "2026-05-22",
+          "gradient_boosting": 1.2828,
+          "logistic_macro": 1.5879,
+          "momentum": 1.5173,
+          "always_entity": 1.5053,
+          "always_benchmark": 1.221
+        },
+        {
+          "date": "2026-06-08",
+          "gradient_boosting": 1.2759,
+          "logistic_macro": 1.5792,
+          "momentum": 1.509,
+          "always_entity": 1.4314,
+          "always_benchmark": 1.2143
+        },
+        {
+          "date": "2026-06-24",
+          "gradient_boosting": 1.308,
+          "logistic_macro": 1.6296,
+          "momentum": 1.5471,
+          "always_entity": 1.4786,
+          "always_benchmark": 1.2449
+        },
+        {
+          "date": "2026-07-09",
+          "gradient_boosting": 1.2846,
+          "logistic_macro": 1.5988,
+          "momentum": 1.5193,
+          "always_entity": 1.4462,
+          "always_benchmark": 1.2226
+        },
+        {
+          "date": "2026-07-23",
+          "gradient_boosting": 1.3369,
+          "logistic_macro": 1.6956,
+          "momentum": 1.6113,
+          "always_entity": 1.5353,
+          "always_benchmark": 1.2724
+        },
+        {
+          "date": "2026-08-06",
+          "gradient_boosting": 1.3249,
+          "logistic_macro": 1.6788,
+          "momentum": 1.7132,
+          "always_entity": 1.6323,
+          "always_benchmark": 1.261
+        },
+        {
+          "date": "2026-08-20",
+          "gradient_boosting": 1.3434,
+          "logistic_macro": 1.7022,
+          "momentum": 1.7014,
+          "always_entity": 1.6211,
+          "always_benchmark": 1.2786
+        },
+        {
+          "date": "2026-09-04",
+          "gradient_boosting": 1.3316,
+          "logistic_macro": 1.6809,
+          "momentum": 1.6818,
+          "always_entity": 1.6023,
+          "always_benchmark": 1.2673
+        },
+        {
+          "date": "2026-09-21",
+          "gradient_boosting": 1.2612,
+          "logistic_macro": 1.5938,
+          "momentum": 1.6821,
+          "always_entity": 1.5193,
+          "always_benchmark": 1.2688
+        }
+      ],
+      "claim": "Each score is the chance that Gold futures beats S&P 500 over the next 10 trading days. The test day is excluded from training by a 10-day embargo, so the label windows do not overlap."
+    },
+    {
+      "name": "miner_sleeve",
+      "question": "Inside a gold budget, should the next 10-day holding be miners or gold?",
+      "entity": "Gold miners (GDX)",
+      "benchmark": "Gold futures",
+      "horizon_days": 10,
+      "embargo_days": 10,
+      "cost_bps": 10,
+      "n_samples": 537,
+      "n_oos": 41,
+      "train_window": 120,
+      "positive_rate": 0.5609756097560976,
+      "metrics": {
+        "gradient_boosting": {
+          "auc": 0.3888888888888889,
+          "accuracy": 0.4146341463414634,
+          "n": 41
+        },
+        "logistic_macro": {
+          "auc": 0.28019323671497587,
+          "accuracy": 0.43902439024390244,
+          "n": 41
+        },
+        "momentum": {
+          "auc": 0.5217391304347826,
+          "accuracy": 0.4634146341463415,
+          "n": 41
+        },
+        "always_entity": {
+          "auc": 0.5,
+          "accuracy": 0.5609756097560976,
+          "n": 41
+        }
+      },
+      "calibration": [
+        {
+          "bin_low": 0.0,
+          "bin_high": 0.2,
+          "n": 10,
+          "mean_predicted": 0.115,
+          "realized_rate": 0.5
+        },
+        {
+          "bin_low": 0.2,
+          "bin_high": 0.4,
+          "n": 4,
+          "mean_predicted": 0.276,
+          "realized_rate": 1.0
+        },
+        {
+          "bin_low": 0.4,
+          "bin_high": 0.6,
+          "n": 9,
+          "mean_predicted": 0.53,
+          "realized_rate": 0.667
+        },
+        {
+          "bin_low": 0.6,
+          "bin_high": 0.8,
+          "n": 6,
+          "mean_predicted": 0.696,
+          "realized_rate": 0.5
+        },
+        {
+          "bin_low": 0.8,
+          "bin_high": 1.0,
+          "n": 12,
+          "mean_predicted": 0.942,
+          "realized_rate": 0.417
+        }
+      ],
+      "stability": {
+        "agreement": 1.0,
+        "n": 41,
+        "full_entity_rate": 0.683,
+        "dropped_entity_rate": 0.683,
+        "features_full": [
+          "AEM__ret_20d",
+          "AEM__vol_20d",
+          "AGI__ret_20d",
+          "AGI__vol_20d",
+          "B__ret_20d",
+          "B__vol_20d",
+          "CL=F__ret_20d",
+          "CL=F__vol_20d",
+          "DX-Y.NYB__ret_20d",
+          "DX-Y.NYB__vol_20d",
+          "GC=F__ret_20d",
+          "GC=F__vol_20d"
+        ],
+        "features_dropped_set": [
+          "AEM__ret_20d",
+          "AEM__vol_20d",
+          "AGI__ret_20d",
+          "AGI__vol_20d",
+          "B__ret_20d",
+          "B__vol_20d",
+          "CL=F__ret_20d",
+          "CL=F__vol_20d",
+          "DX-Y.NYB__ret_20d",
+          "DX-Y.NYB__vol_20d",
+          "GC=F__ret_20d",
+          "GC=F__vol_20d"
+        ],
+        "note": "Agreement is the share of dates with the same binary call after real-yield and dollar features are removed. Entity rate is how often each version chooses the entity. Agreement near 100% with an entity rate near 0% or 100% means the model almost never switches."
+      },
+      "backtest": {
+        "gradient_boosting": {
+          "final_wealth": 1.6153,
+          "total_return": 0.6153,
+          "max_drawdown": -0.2919,
+          "hit_rate": 0.4146,
+          "avg_period_return": 0.0139,
+          "n_periods": 41
+        },
+        "logistic_macro": {
+          "final_wealth": 1.6328,
+          "total_return": 0.6328,
+          "max_drawdown": -0.314,
+          "hit_rate": 0.439,
+          "avg_period_return": 0.0146,
+          "n_periods": 41
+        },
+        "momentum": {
+          "final_wealth": 1.7596,
+          "total_return": 0.7596,
+          "max_drawdown": -0.2573,
+          "hit_rate": 0.4634,
+          "avg_period_return": 0.0161,
+          "n_periods": 41
+        },
+        "always_entity": {
+          "final_wealth": 2.2546,
+          "total_return": 1.2546,
+          "max_drawdown": -0.2919,
+          "hit_rate": null,
+          "avg_period_return": 0.0232,
+          "n_periods": 41
+        },
+        "always_benchmark": {
+          "final_wealth": 1.5193,
+          "total_return": 0.5193,
+          "max_drawdown": -0.2023,
+          "hit_rate": null,
+          "avg_period_return": 0.0112,
+          "n_periods": 41
+        }
+      },
+      "curve": [
+        {
+          "date": "2025-02-04",
+          "gradient_boosting": 1.021,
+          "logistic_macro": 1.021,
+          "momentum": 1.0377,
+          "always_entity": 1.0377,
+          "always_benchmark": 1.021
+        },
+        {
+          "date": "2025-02-20",
+          "gradient_boosting": 1.0108,
+          "logistic_macro": 0.9987,
+          "momentum": 1.0161,
+          "always_entity": 1.0161,
+          "always_benchmark": 1.0108
+        },
+        {
+          "date": "2025-03-06",
+          "gradient_boosting": 1.0513,
+          "logistic_macro": 1.0904,
+          "momentum": 1.0558,
+          "always_entity": 1.1095,
+          "always_benchmark": 1.0513
+        },
+        {
+          "date": "2025-03-20",
+          "gradient_boosting": 1.0782,
+          "logistic_macro": 1.104,
+          "momentum": 1.0678,
+          "always_entity": 1.1232,
+          "always_benchmark": 1.0782
+        },
+        {
+          "date": "2025-04-03",
+          "gradient_boosting": 1.1997,
+          "logistic_macro": 1.2295,
+          "momentum": 1.1893,
+          "always_entity": 1.251,
+          "always_benchmark": 1.1496
+        },
+        {
+          "date": "2025-04-17",
+          "gradient_boosting": 1.1092,
+          "logistic_macro": 1.1368,
+          "momentum": 1.0996,
+          "always_entity": 1.1566,
+          "always_benchmark": 1.1202
+        },
+        {
+          "date": "2025-05-02",
+          "gradient_boosting": 1.0916,
+          "logistic_macro": 1.116,
+          "momentum": 1.0795,
+          "always_entity": 1.1382,
+          "always_benchmark": 1.1008
+        },
+        {
+          "date": "2025-05-19",
+          "gradient_boosting": 1.1457,
+          "logistic_macro": 1.1725,
+          "momentum": 1.1341,
+          "always_entity": 1.2928,
+          "always_benchmark": 1.1565
+        },
+        {
+          "date": "2025-06-03",
+          "gradient_boosting": 1.1558,
+          "logistic_macro": 1.1828,
+          "momentum": 1.1419,
+          "always_entity": 1.303,
+          "always_benchmark": 1.1667
+        },
+        {
+          "date": "2025-06-17",
+          "gradient_boosting": 1.1363,
+          "logistic_macro": 1.1629,
+          "momentum": 1.1238,
+          "always_entity": 1.2823,
+          "always_benchmark": 1.1506
+        },
+        {
+          "date": "2025-07-07",
+          "gradient_boosting": 1.1331,
+          "logistic_macro": 1.1596,
+          "momentum": 1.1206,
+          "always_entity": 1.2787,
+          "always_benchmark": 1.1724
+        },
+        {
+          "date": "2025-07-21",
+          "gradient_boosting": 1.1742,
+          "logistic_macro": 1.2016,
+          "momentum": 1.1261,
+          "always_entity": 1.325,
+          "always_benchmark": 1.1793
+        },
+        {
+          "date": "2025-08-05",
+          "gradient_boosting": 1.147,
+          "logistic_macro": 1.2046,
+          "momentum": 1.1278,
+          "always_entity": 1.3283,
+          "always_benchmark": 1.1532
+        },
+        {
+          "date": "2025-08-19",
+          "gradient_boosting": 1.3201,
+          "logistic_macro": 1.3876,
+          "momentum": 1.2991,
+          "always_entity": 1.5301,
+          "always_benchmark": 1.2483
+        },
+        {
+          "date": "2025-09-03",
+          "gradient_boosting": 1.3902,
+          "logistic_macro": 1.4612,
+          "momentum": 1.3681,
+          "always_entity": 1.6113,
+          "always_benchmark": 1.2765
+        },
+        {
+          "date": "2025-09-17",
+          "gradient_boosting": 1.5617,
+          "logistic_macro": 1.6415,
+          "momentum": 1.5368,
+          "always_entity": 1.8101,
+          "always_benchmark": 1.3382
+        },
+        {
+          "date": "2025-10-01",
+          "gradient_boosting": 1.6496,
+          "logistic_macro": 1.7338,
+          "momentum": 1.6233,
+          "always_entity": 1.912,
+          "always_benchmark": 1.4426
+        },
+        {
+          "date": "2025-10-15",
+          "gradient_boosting": 1.569,
+          "logistic_macro": 1.5125,
+          "momentum": 1.4161,
+          "always_entity": 1.6679,
+          "always_benchmark": 1.3737
+        },
+        {
+          "date": "2025-10-29",
+          "gradient_boosting": 1.6525,
+          "logistic_macro": 1.6866,
+          "momentum": 1.49,
+          "always_entity": 1.8599,
+          "always_benchmark": 1.4468
+        },
+        {
+          "date": "2025-11-12",
+          "gradient_boosting": 1.6336,
+          "logistic_macro": 1.6655,
+          "momentum": 1.4729,
+          "always_entity": 1.9138,
+          "always_benchmark": 1.4302
+        },
+        {
+          "date": "2025-11-26",
+          "gradient_boosting": 1.6915,
+          "logistic_macro": 1.7601,
+          "momentum": 1.5565,
+          "always_entity": 2.0244,
+          "always_benchmark": 1.4809
+        },
+        {
+          "date": "2025-12-11",
+          "gradient_boosting": 1.7855,
+          "logistic_macro": 1.8762,
+          "momentum": 1.6592,
+          "always_entity": 2.158,
+          "always_benchmark": 1.5632
+        },
+        {
+          "date": "2025-12-26",
+          "gradient_boosting": 1.8704,
+          "logistic_macro": 1.9673,
+          "momentum": 1.7397,
+          "always_entity": 2.2627,
+          "always_benchmark": 1.5845
+        },
+        {
+          "date": "2026-01-12",
+          "gradient_boosting": 2.1355,
+          "logistic_macro": 2.2462,
+          "momentum": 1.9864,
+          "always_entity": 2.5835,
+          "always_benchmark": 1.7451
+        },
+        {
+          "date": "2026-01-27",
+          "gradient_boosting": 2.1117,
+          "logistic_macro": 2.1171,
+          "momentum": 1.8722,
+          "always_entity": 2.435,
+          "always_benchmark": 1.7274
+        },
+        {
+          "date": "2026-02-10",
+          "gradient_boosting": 2.2767,
+          "logistic_macro": 2.1971,
+          "momentum": 1.943,
+          "always_entity": 2.6277,
+          "always_benchmark": 1.7945
+        },
+        {
+          "date": "2026-02-25",
+          "gradient_boosting": 2.076,
+          "logistic_macro": 2.0012,
+          "momentum": 1.9255,
+          "always_entity": 2.396,
+          "always_benchmark": 1.7783
+        },
+        {
+          "date": "2026-03-11",
+          "gradient_boosting": 1.7679,
+          "logistic_macro": 1.757,
+          "momentum": 1.6925,
+          "always_entity": 2.0405,
+          "always_benchmark": 1.5631
+        },
+        {
+          "date": "2026-03-25",
+          "gradient_boosting": 2.0143,
+          "logistic_macro": 2.0001,
+          "momentum": 1.7912,
+          "always_entity": 2.3249,
+          "always_benchmark": 1.6543
+        },
+        {
+          "date": "2026-04-09",
+          "gradient_boosting": 1.8882,
+          "logistic_macro": 1.8749,
+          "momentum": 1.6773,
+          "always_entity": 2.1792,
+          "always_benchmark": 1.622
+        },
+        {
+          "date": "2026-04-23",
+          "gradient_boosting": 1.8785,
+          "logistic_macro": 1.8678,
+          "momentum": 1.6687,
+          "always_entity": 2.1681,
+          "always_benchmark": 1.6175
+        },
+        {
+          "date": "2026-05-07",
+          "gradient_boosting": 1.7612,
+          "logistic_macro": 1.7492,
+          "momentum": 1.6074,
+          "always_entity": 2.0327,
+          "always_benchmark": 1.5597
+        },
+        {
+          "date": "2026-05-22",
+          "gradient_boosting": 1.6332,
+          "logistic_macro": 1.6221,
+          "momentum": 1.5513,
+          "always_entity": 1.8849,
+          "always_benchmark": 1.5053
+        },
+        {
+          "date": "2026-06-08",
+          "gradient_boosting": 1.6122,
+          "logistic_macro": 1.5409,
+          "momentum": 1.4752,
+          "always_entity": 1.8607,
+          "always_benchmark": 1.4314
+        },
+        {
+          "date": "2026-06-24",
+          "gradient_boosting": 1.6379,
+          "logistic_macro": 1.5916,
+          "momentum": 1.5238,
+          "always_entity": 1.8904,
+          "always_benchmark": 1.4786
+        },
+        {
+          "date": "2026-07-09",
+          "gradient_boosting": 1.6215,
+          "logistic_macro": 1.5568,
+          "momentum": 1.507,
+          "always_entity": 1.8715,
+          "always_benchmark": 1.4462
+        },
+        {
+          "date": "2026-07-23",
+          "gradient_boosting": 1.7197,
+          "logistic_macro": 1.74,
+          "momentum": 1.5983,
+          "always_entity": 2.0935,
+          "always_benchmark": 1.5353
+        },
+        {
+          "date": "2026-08-06",
+          "gradient_boosting": 1.8284,
+          "logistic_macro": 1.8482,
+          "momentum": 1.9,
+          "always_entity": 2.4909,
+          "always_benchmark": 1.6323
+        },
+        {
+          "date": "2026-08-20",
+          "gradient_boosting": 1.8158,
+          "logistic_macro": 1.8355,
+          "momentum": 1.9313,
+          "always_entity": 2.5318,
+          "always_benchmark": 1.6211
+        },
+        {
+          "date": "2026-09-04",
+          "gradient_boosting": 1.7449,
+          "logistic_macro": 1.7637,
+          "momentum": 1.8577,
+          "always_entity": 2.4354,
+          "always_benchmark": 1.6023
+        },
+        {
+          "date": "2026-09-21",
+          "gradient_boosting": 1.6153,
+          "logistic_macro": 1.6328,
+          "momentum": 1.7596,
+          "always_entity": 2.2546,
+          "always_benchmark": 1.5193
+        }
+      ],
+      "claim": "Each score is the chance that Gold miners (GDX) beats Gold futures over the next 10 trading days. The test day is excluded from training by a 10-day embargo, so the label windows do not overlap."
+    }
+  ],
+  "claims": [
+    {
+      "output": "P(beat gold futures)",
+      "method": "Walk-forward classifier on the feature store",
+      "allowed_meaning": "Chance the named asset's forward return exceeds gold futures. For GLD this is a tracking spread, not the chance the gold price rises."
+    },
+    {
+      "output": "P(beat GDX)",
+      "method": "95% of P(beat gold futures). No separate model is trained.",
+      "allowed_meaning": "A scaled copy of the gold-relative score. It is not a probability of beating the miners ETF."
+    },
+    {
+      "output": "Expected alpha",
+      "method": "Model expected return minus a flat 1% hurdle",
+      "allowed_meaning": "A ranking aid. It is not measured excess return versus gold."
+    },
+    {
+      "output": "Keep / Add / Reduce",
+      "method": "Rules on the 10-day gold-versus-equity spread, real yield, dollar trend, and the regime table",
+      "allowed_meaning": "A current stance for the gold budget. The research backtest is the evidence for whether a model rule would have helped."
+    },
+    {
+      "output": "Regime gold bias",
+      "method": "Fixed hypothesis for the fitted HMM state",
+      "allowed_meaning": "A label for the environment. It is not a forecast and it is not estimated from this sample's returns."
+    },
+    {
+      "output": "Research AUC and wealth curves",
+      "method": "Purged walk-forward, embargo equal to the horizon, 10 bps per flip, non-overlapping 10-day periods",
+      "allowed_meaning": "The result to cite. The on-screen model catalog is the operational screen and uses the same embargo only after the next pipeline run."
+    }
+  ]
+}

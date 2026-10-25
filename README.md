@@ -1,173 +1,249 @@
 # Precious Metals Macro Intelligence Platform (PMIP)
 
-An institutional-grade quantitative research platform that predicts the probability of outperformance for gold, senior/mid/junior miners, and gold royalty companies — driven by macro regime detection, feature engineering, ML models, and AI research agents.
+**A metals allocation research desk** — not a trading platform and not “AI for gold.”
+
+It answers two questions a gold book actually faces:
+
+1. **Gold budget.** Over the next few weeks, should exposure to gold be larger or smaller versus equities (and the rest of a multi-asset book)?
+2. **Gold sleeve.** Given that budget, how should it be split between bullion and miners / royalties?
+
+The screen is a decision desk. The evidence behind it is a purged walk-forward study with embargo, baselines, and turnover costs. Several on-screen figures are explicit rules rather than measured probabilities; the [claim inventory](docs/research-note.md) says which is which.
+
+---
+
+## How to frame it
+
+| Audience | One-liner |
+| --- | --- |
+| Portfolio / interview | Precious-metals macro intelligence desk: regime detection, gold-budget and miner-sleeve signals, purged validation, and multi-horizon paper books. |
+| Quant / research PM | Research OS for two decisions — gold vs markets, and miners vs gold — with claim inventory, as-of scoring, and explicit costs. |
+| Product | A morning briefing for gold and mining exposure: stance, sleeve, evidence, and simulated books. It does not place trades. |
+
+**What it is not:** an OMS/broker, live AUM product, or a claim of guaranteed alpha. Market data is mostly free Yahoo closes plus optional FRED; some tables are still seeded.
+
+---
+
+## What the desk does
+
+### Decisions
+- **Keep / Add / Reduce** gold versus stocks, cash, oil, and copper ([Gold vs Markets](docs/executive-platform-guide.md)).
+- **Signal book** — for each scored name and horizon, P(beat gold), expected return / alpha, and a long–short label.
+- **Strategy Desk** — ranked playbooks composed from stance, sleeve, regime, and paper results (research suggestions with explicit recipes and caveats).
+
+### Evidence
+- **Purged research** (`make research`) — citeable gold-vs-SPX and GDX-vs-gold studies: embargo = horizon, non-overlapping periods, 10 bp flip cost, baselines (always-hold, momentum, logistic).
+- **Model catalog** — operational walk-forward diagnostics for deployed entity × horizon models.
+- **Paper books** — separate $100k accounts for **5d · 10d · 1m · 3m · 6m** that rebalance on their own clocks using **purged as-of** forecasts (horizon embargo), mark to market vs gold and SPX.
+
+### Context
+- Four-state **HMM regime**, standing gold/miner biases, causal **knowledge graph**.
+- Macro strip: dollar, real yields, VIX, oil, copper, ETF-flow proxies, CB seed rows.
+
+### Ops
+- **Pipeline run picker** — short jobs (refresh prices, rescore signals, train short horizons, rebuild paper) or full run.
+- Granular progress tracker (stage, current item, activity log).
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     React Dashboard (Phase 9)                    │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ FastAPI
-┌────────────────────────────▼────────────────────────────────────┐
-│  Predictions │ Regimes │ Portfolio │ Knowledge Graph │ Agents  │
-└──────┬───────────────┬──────────────┬─────────────────────────┘
-       │               │              │
-┌──────▼──────┐ ┌──────▼──────┐ ┌────▼─────────────────────────┐
-│ LightGBM    │ │ HMM Regime  │ │ HRP / Mean-Var / Kelly       │
-│ Walk-Fwd    │ │ Detection   │ │ Portfolio Optimizer          │
-└──────┬──────┘ └──────┬──────┘ └──────────────────────────────┘
-       │               │
-┌──────▼───────────────▼──────────────────────────────────────────┐
-│                    Feature Store (Phase 4)                       │
-│  Returns │ Volatility │ RSI/MACD │ Ratios │ Surprises          │
-└──────┬──────────────────────────────────────────────────────────┘
-       │
-┌──────▼──────────────────────────────────────────────────────────┐
-│              PostgreSQL Data Warehouse (Phase 2-3)               │
-│  Macro │ ETF Flows │ Central Banks │ GPR │ Miner Fundamentals   │
-└──────┬──────────────────────────────────────────────────────────┘
-       │
-┌──────▼──────────────────────────────────────────────────────────┐
-│           Prefect ETL Pipeline (daily orchestration)             │
-│  FRED │ yfinance │ WGC │ GDELT proxy │ SEC filings             │
-└─────────────────────────────────────────────────────────────────┘
+React terminal (workspaces)
+        │
+     FastAPI
+        │
+ ┌──────┼──────────────────────────────┐
+ │      │                              │
+ Signals / Strategy / Allocation    Research note
+ Paper / History / Portfolio        (purged WF)
+        │                              │
+ Models (LightGBM or sklearn HGB)  ←──┘
+ Regime HMM · Feature store
+        │
+ SQLite warehouse (default)  or  Postgres
+        │
+ ETL: Yahoo Finance · FRED (optional) · derived flows · seeds
 ```
 
-## Knowledge Graph (Phase 1)
+Default store is local SQLite (`data/pmip.db`). Postgres + MLflow are optional via Docker.
 
-The platform encodes testable macro hypotheses as a causal knowledge graph:
+---
 
-```
-Fed Policy → Real Interest Rates → Dollar (DXY) → Gold → Mining Margins → Mining Stocks
-```
+## Workspaces
 
-Expanded with: China demand, central bank purchases, inflation, oil, treasury yields, volatility, wars, sanctions, and ETF flows. Every edge has a directional hypothesis with magnitude hints.
+| Code | Workspace | Role |
+| --- | --- | --- |
+| CMD | Command Center | Morning briefing |
+| STR | Strategy Desk | Ranked playbooks from live data |
+| ALC | Gold vs Markets | Keep / Add / Reduce gold budget |
+| MTL | Metals Book | Priced universe and gaps |
+| SIG | Signal Book | Per-name forecasts by horizon |
+| MDL | Model Validation | Purged evidence + model catalog |
+| PAP | Paper Books | Multi-horizon shadow PnL |
+| PTF | Portfolio | HRP research weights |
+| RSH | Research Desk | Regime history, hypotheses, macro |
+| HST | Historical Outlook | As-of probability paths |
+| XPL | How It Works | Method and claim notes |
+| RSK | Risk Monitor | GPR proxy, flows, CB, agents |
 
-**Key hypothesis:** If real yields rise 40bp, GDX underperforms gold by 3-8%.
+---
 
-## Quick Start
+## Horizons
+
+Forecast and paper clocks (trading days):
+
+| Label | Days | Approx. |
+| --- | ---: | --- |
+| 5d | 5 | ~1 week |
+| 10d | 10 | ~2 weeks |
+| 1m | 20 | ~1 month |
+| 3m | 63 | ~3 months |
+| 6m | 126 | ~6 months |
+
+Live desk signals use full-sample registry models. **History charts and paper books** use **as-of** refits with a horizon embargo so labels that would reach into the score date are excluded.
+
+---
+
+## Data sources
+
+| Data | Source | Notes |
+| --- | --- | --- |
+| Futures, ETFs, equities, SPX, VIX, oil | Yahoo Finance | Daily closes in the warehouse |
+| Treasury / real yields / breakevens | FRED | When `FRED_API_KEY` is set; otherwise Yahoo yields and a real-yield estimate |
+| ETF flows (GLD, IAU) | Derived from Yahoo | Proxy, not official flow files |
+| Central-bank gold | Seed rows | Illustrative WGC-style monthly |
+| Geopolitical risk | Proxy | VIX / oil vol composite (GDELT-ready hooks) |
+| Miner fundamentals | Seed quarterly | AISC / production placeholders |
+
+Unpriced gaps (LME base metals, lease rates, physical premiums, options) are listed in the Metals Book.
+
+---
+
+## Quick start
 
 ### Prerequisites
 
 - Python 3.11+
 - Node.js 20+
-- Docker & Docker Compose
-- (Optional) FRED API key from [FRED](https://fred.stlouisfed.org/docs/api/api_key.html)
+- (Optional) [FRED API key](https://fred.stlouisfed.org/docs/api/api_key.html)
+- (Optional) Docker for Postgres + MLflow
 
 ### Setup
 
 ```bash
-cp .env.example .env          # optional: add FRED_API_KEY for treasury/real yield data
+cp .env.example .env          # optional: FRED_API_KEY, DATABASE_URL
 
-# Install dependencies (once)
-make install
-
-# Initialize database (SQLite — no Docker required)
-make init-db
-
-# Run full pipeline (~2 min) — fetches market data, trains models, generates predictions
-make pipeline
-
-# Start API (terminal 1)
-make api
-
-# Start dashboard (terminal 2)
-make frontend
+make install                  # Python venv + frontend deps
+make init-db                  # SQLite warehouse
+make pipeline                 # or use Run Pipeline in the UI with a short preset
+make dev                      # build frontend + API on http://localhost:8000
 ```
 
-Open **http://localhost:3000** for the dashboard (Vite may pick another port if 3000 is busy — check terminal output). API docs: **http://localhost:8000/docs**
-
-Verify everything works:
+Open **http://localhost:8000**. API docs: **http://localhost:8000/docs**.
 
 ```bash
+make research                 # regenerate purged tables → docs/research/
+make test
 make verify
 ```
 
-### Optional: PostgreSQL + MLflow via Docker
+### Pipeline presets (UI)
+
+| Preset | Typical use |
+| --- | --- |
+| Refresh prices | ETL + features + regime |
+| Rescore signals | Predict + portfolio from existing models |
+| Train short horizons | Liquid sleeve · 5d / 10d / 1m |
+| Rebuild paper books | As-of history + paper |
+| Full pipeline | Everything (long) |
+
+Customize stages, horizons, liquid vs full universe, and walk-forward on/off.
+
+### Optional Postgres + MLflow
 
 ```bash
-make up                       # Start PostgreSQL + MLflow
-# Set DATABASE_URL=postgresql://pmip:pmip_dev@localhost:5432/precious_metals in .env
+make up
+# DATABASE_URL=postgresql://pmip:pmip_dev@localhost:5432/precious_metals
 make init-db && make pipeline
 ```
 
-## Phases
+---
 
-| Phase | Module | Description |
-|-------|--------|-------------|
-| 1 | `research/knowledge_graph.py` | Causal hypotheses & regime definitions |
-| 2 | `etl/` | Macro, ETF flows, central banks, geopolitical data |
-| 3 | `etl/miners.py` | Quarterly fundamentals per company |
-| 4 | `features/engineering.py` | Technical & cross-asset feature engineering |
-| 5 | `models/regime.py` | HMM-based regime detection (4 regimes) |
-| 6 | `models/training.py` | LightGBM with walk-forward validation |
-| 7 | `portfolio/optimizer.py` | HRP, mean-variance, Kelly sizing |
-| 8 | `agents/research.py` | Macro, Geopolitical, Mining, Quant agents |
-| 9 | `api/main.py` + `frontend/` | FastAPI backend & React dashboard |
+## Research & validation
 
-## Prediction Targets
+The number to cite for “does the model help?” is the purged study, not the operational catalog alone.
 
-| Asset Class | Proxy | Tier |
-|-------------|-------|------|
-| Gold | GLD / GC=F | gold |
-| Senior miners | GDX, NEM, AEM, B | senior |
-| Mid-tier | AGI, KGC | mid |
-| Junior miners | GDXJ | junior |
-| Royalties | RING | royalty |
+```bash
+make research
+```
 
-## API Endpoints
+That rewrites [docs/research-note.md](docs/research-note.md), [docs/research/latest-results.md](docs/research/latest-results.md), and `docs/research/results.json`.
+
+Method in short:
+
+- Label on day *t*: does the entity beat the benchmark over the next *h* days?
+- Training rows whose labels reach into the test day are removed (**embargo = h**).
+- Folds step by *h* so economic periods do not overlap.
+- Wealth compounds those non-overlapping returns minus **10 bps** when the book flips.
+- Baselines: always entity, always benchmark, 20-day relative momentum, small logistic.
+
+Also see [docs/executive-platform-guide.md](docs/executive-platform-guide.md) and [docs/numbers-at-a-glance.md](docs/numbers-at-a-glance.md).
+
+---
+
+## API (selected)
 
 | Endpoint | Description |
-|----------|-------------|
-| `GET /api/v1/dashboard` | Morning intelligence briefing |
-| `GET /api/v1/predictions` | Outperformance probabilities |
-| `GET /api/v1/regime/current` | Current market regime |
-| `GET /api/v1/knowledge-graph` | Full causal graph |
-| `GET /api/v1/hypotheses/{target}` | Hypotheses affecting a variable |
-| `POST /api/v1/pipeline/run` | Trigger full pipeline |
-| `GET /api/v1/etf-flows` | Gold ETF flow data |
-| `GET /api/v1/central-banks` | CB purchase data |
+| --- | --- |
+| `GET /api/v1/dashboard` | Morning briefing |
+| `GET /api/v1/allocation` | Keep / Add / Reduce gold budget |
+| `GET /api/v1/strategies` | Ranked Strategy Desk playbooks |
+| `GET /api/v1/research` | Signals, catalog, regime, portfolio analytics |
+| `GET /api/v1/paper` | Multi-horizon paper books |
+| `GET /api/v1/history` | As-of outlook series |
+| `GET /api/v1/universe` | Metals book |
+| `GET /api/v1/pipeline/options` | Presets and knobs |
+| `POST /api/v1/pipeline/run` | Start full or partial pipeline |
+| `GET /api/v1/pipeline/status` | Progress snapshot |
 
-## Dashboard Output
+---
 
-Every morning the dashboard generates:
+## Layout
 
-- **Macro:** Fed probability, dollar strength, real yields, inflation
-- **Gold:** Bullish probability (e.g., 78%), 10-day horizon
-- **Mining:** Ranked companies by expected alpha
-- **Risk:** War probability, oil disruption, CB buying, ETF flows
-- **Portfolio:** Top 10 miners with HRP-optimized weights
-- **Agents:** Macro, geopolitical, mining, and quant agent scores
+| Path | Role |
+| --- | --- |
+| `src/pmip/etl/` | Market and macro ingestion |
+| `src/pmip/features/` | Feature store |
+| `src/pmip/models/` | Training, as-of scoring, regime |
+| `src/pmip/research/` | Purged evaluation, knowledge graph |
+| `src/pmip/portfolio/` | HRP / research weights |
+| `src/pmip/api/` | FastAPI services |
+| `src/pmip/pipeline/` | Runner, progress, run options |
+| `frontend/` | React terminal |
+| `docs/` | Research note and guides |
+| `scripts/` | CLI entrypoints |
 
-## Data Sources
+---
 
-| Data | Source | Frequency |
-|------|--------|-----------|
-| Gold, silver, copper, oil, VIX, SPX | yfinance / FRED | Daily |
-| Treasury yields, real yields, breakevens | FRED | Daily |
-| ETF flows (GLD, IAU) | yfinance (proxy) | Daily |
-| Central bank purchases | WGC (seed data) | Monthly |
-| Geopolitical risk | GPR composite (VIX/oil proxy + GDELT-ready) | Daily |
-| Miner fundamentals | SEC filings (seed data) | Quarterly |
+## Limits (read before citing numbers)
 
-## Model Training
+- Sample length is still short relative to institutional backtests.
+- Without FRED, real yields are estimated.
+- Central-bank and miner-fundamental tables are **seeds**, not live vendor feeds.
+- Live signal book uses **full-sample** registry models; paper / history use **as-of** scores.
+- Paper books are shadow simulations (10 bps, liquid sleeve, rule-based stance) — not audited live track record.
+- Geopolitical risk is a **proxy**, not a news NLP feed.
 
-Walk-forward validation with:
-- 2-year training window
-- 3-month test window
-- 1-month step size
-- Targets: P(outperform gold), P(beat GDX), expected return
-
-Models tracked in MLflow at `http://localhost:5001`.
+---
 
 ## Extending
 
-- **GDELT/ACLED:** Wire into `etl/geopolitical.py` for real NLP-derived GPR
-- **WGC API:** Replace seed data in `etl/central_banks.py`
-- **SEC EDGAR:** Automate quarterly miner data in `etl/miners.py`
-- **LSTM/TFT:** Add to `models/training.py` as ensemble members
-- **LLM agents:** Set `OPENAI_API_KEY` for enhanced agent summaries
+- Wire real WGC / IMF CB gold and CapIQ or EDGAR fundamentals; quarantine seeds.
+- Point-in-time fundamentals and licensed prices for diligence-ready runs.
+- GDELT / ACLED into `etl/geopolitical.py`.
+- Model-only paper book beside the policy (yield/dollar/regime) book for cleaner interviews.
+
+---
 
 ## License
 

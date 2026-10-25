@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Tooltip } from '../components/Tooltip'
 import type { DashboardData, ExplainData } from '../types'
-import { fmtPct, signalClass } from '../utils'
+import { METRIC_HELP, fmtPct, signalClass } from '../utils'
 
 interface ExplainabilityProps {
   explain: ExplainData
@@ -25,6 +26,35 @@ export function Explainability({ explain, dashboard }: ExplainabilityProps) {
         <span className="explain-banner-icon" aria-hidden>◎</span>
         <p>{explain.transparency_note}</p>
       </div>
+
+      {explain.claims && explain.claims.length > 0 && (
+        <div className="card">
+          <div className="card-title">What each number is allowed to mean</div>
+          <p className="explain-intro">
+            The research note in the repository is the study to cite. These rows keep the live screen honest.
+          </p>
+          <div className="table-wrap">
+            <table className="data-table institutional">
+              <thead>
+                <tr>
+                  <th><Tooltip label={METRIC_HELP.output}><span>Output</span></Tooltip></th>
+                  <th><Tooltip label={METRIC_HELP.method}><span>How it is made</span></Tooltip></th>
+                  <th><Tooltip label={METRIC_HELP.allowed}><span>What it can mean</span></Tooltip></th>
+                </tr>
+              </thead>
+              <tbody>
+                {explain.claims.map((claim) => (
+                  <tr key={claim.output}>
+                    <td>{claim.output}</td>
+                    <td>{claim.method}</td>
+                    <td>{claim.allowed_meaning}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {explain.signal_walkthrough && (
         <div className="card walkthrough-card">
@@ -118,9 +148,9 @@ export function Explainability({ explain, dashboard }: ExplainabilityProps) {
           <table className="data-table institutional compact">
             <thead>
               <tr>
-                <th>Label</th>
-                <th>Rule</th>
-                <th>Interpretation</th>
+                <th><Tooltip label={METRIC_HELP.label}><span>Label</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.rule}><span>Rule</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.interpretation}><span>Interpretation</span></Tooltip></th>
               </tr>
             </thead>
             <tbody>
@@ -242,7 +272,11 @@ export function Explainability({ explain, dashboard }: ExplainabilityProps) {
           <div className="card-title">Data Sources</div>
           <table className="data-table institutional compact">
             <thead>
-              <tr><th>Data</th><th>Source</th><th>Freq</th></tr>
+              <tr>
+                <th><Tooltip label={METRIC_HELP.data}><span>Data</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.source}><span>Source</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.freq}><span>Freq</span></Tooltip></th>
+              </tr>
             </thead>
             <tbody>
               {explain.data_sources.map((ds) => (

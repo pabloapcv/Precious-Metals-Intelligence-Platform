@@ -14,9 +14,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from pmip.api.allocation_service import get_allocation
+from pmip.api.paper_service import get_paper
 from pmip.api.explain_service import get_explainability
 from pmip.api.history_service import get_history
 from pmip.api.macro_service import build_macro_snapshot
+from pmip.api.strategy_service import get_strategies
+from pmip.api.universe_service import get_universe
 from pmip.api.research_service import (
   get_macro_series,
   get_model_catalog,
@@ -461,14 +465,58 @@ def _build_dashboard(db: Session) -> DashboardResponse:
   )
 
 
+def _start_pipeline_background(payload: dict | None = None) -> dict:
+  from threading import Thread
+
+  from pmip.pipeline.options import resolve_config
+  from pmip.pipeline.progress import TRACKER
+
+  cfg = resolve_config(payload)
+  cfg_dict = cfg.to_dict()
+  if not TRACKER.begin(stages=cfg.stages, config=cfg_dict):
+    return TRACKER.snapshot()
+
+  def _job() -> None:
+    try:
+      run_full_pipeline(on_progress=TRACKER.report, config=cfg)
+      TRACKER.finish()
+    except Exception as exc:
+      logger.exception("Pipeline failed")
+      TRACKER.fail(str(exc).split("[SQL:", 1)[0].strip())
+
+  Thread(target=_job, name="pmip-pipeline", daemon=True).start()
+  return TRACKER.snapshot()
+
+
+class PipelineRunRequest(BaseModel):
+  preset: str | None = None
+  stages: list[str] | None = None
+  horizons: list[int] | None = None
+  train_scope: str | None = None
+  walk_forward: bool | None = None
+  lookback_days: int | None = None
+
+
+@app.get("/api/v1/pipeline/options")
+def pipeline_options():
+  """Presets and knobs for a partial pipeline run."""
+  from pmip.pipeline.options import describe_options
+
+  return describe_options()
+
+
 @app.post("/api/v1/pipeline/run")
-def run_pipeline():
-  """Trigger full ETL → features → regime → training → predictions pipeline."""
-  try:
-    return run_full_pipeline()
-  except Exception as e:
-    logger.exception("Pipeline failed")
-    raise HTTPException(500, f"Pipeline failed: {e}") from e
+def run_pipeline(payload: PipelineRunRequest | None = None):
+  """Start a full or partial pipeline. Body optional — see /pipeline/options. Poll /pipeline/status."""
+  body = payload.model_dump(exclude_none=True) if payload else {}
+  return _start_pipeline_background(body)
+
+
+@app.get("/api/v1/pipeline/status")
+def pipeline_status():
+  from pmip.pipeline.progress import TRACKER
+
+  return TRACKER.snapshot()
 
 
 @app.get("/api/v1/etf-flows")
@@ -557,6 +605,46 @@ def explain(db: Session = Depends(get_db)):
     return get_explainability(db)
   except Exception as exc:
     logger.exception("Explain endpoint failed")
+    raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/universe")
+def universe(db: Session = Depends(get_db)):
+  """Every metals instrument the book tracks, plus the classes the feed cannot mark."""
+  try:
+    return get_universe(db)
+  except Exception as exc:
+    logger.exception("Universe endpoint failed")
+    raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/paper")
+def paper(db: Session = Depends(get_db)):
+  """Three $100k paper books, one each for the 5-, 10-, and 20-day forecasts."""
+  try:
+    return get_paper(db)
+  except Exception as exc:
+    logger.exception("Paper endpoint failed")
+    raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/allocation")
+def allocation(db: Session = Depends(get_db)):
+  """Gold versus stocks, cash, oil, and copper: keep, add, or reduce."""
+  try:
+    return get_allocation(db)
+  except Exception as exc:
+    logger.exception("Allocation endpoint failed")
+    raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/strategies")
+def strategies(db: Session = Depends(get_db)):
+  """Ranked playbooks from allocation, signals, regime, and paper books."""
+  try:
+    return get_strategies(db)
+  except Exception as exc:
+    logger.exception("Strategies endpoint failed")
     raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

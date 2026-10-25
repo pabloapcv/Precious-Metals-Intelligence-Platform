@@ -10,8 +10,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { Tooltip } from '../components/Tooltip'
 import type { HistoryData } from '../types'
-import { SERIES_COLORS, SERIES_LABELS } from '../utils'
+import { METRIC_HELP, SERIES_COLORS, SERIES_LABELS, horizonLabel } from '../utils'
 
 const ENTITY_COLORS: Record<string, string> = {
   GLD: '#d4a843',
@@ -25,8 +26,8 @@ const ENTITY_COLORS: Record<string, string> = {
   AGI: '#4ade80',
 }
 
-const LOOKBACKS = [60, 90, 180, 252]
-const HORIZONS = [5, 10, 20]
+const LOOKBACKS = [90, 180, 252, 504, 756]
+const DEFAULT_HORIZONS = [5, 10, 20, 63, 126]
 
 interface HistoryChartsProps {
   history: HistoryData
@@ -38,6 +39,9 @@ export function HistoryCharts({ history, onReload, loading }: HistoryChartsProps
   const [days, setDays] = useState(history.lookback_days)
   const [horizon, setHorizon] = useState(history.horizon_days)
   const [selectedEntities, setSelectedEntities] = useState<string[]>(['GLD', 'GDX', 'GDXJ'])
+  const horizons = history.available_horizons?.length ? history.available_horizons : DEFAULT_HORIZONS
+  const hLabels = history.horizon_labels
+  const hLabel = history.horizon_label || horizonLabel(horizon, hLabels)
 
   const goldChart = useMemo(
     () =>
@@ -126,14 +130,14 @@ export function HistoryCharts({ history, onReload, loading }: HistoryChartsProps
             ))}
           </div>
           <div className="horizon-tabs" role="group" aria-label="Horizon">
-            {HORIZONS.map((h) => (
+            {horizons.map((h) => (
               <button
                 key={h}
                 type="button"
                 className={`horizon-tab ${horizon === h ? 'active' : ''}`}
                 onClick={() => setHorizon(h)}
               >
-                {h}d fwd
+                {horizonLabel(h, hLabels)}
               </button>
             ))}
           </div>
@@ -143,37 +147,46 @@ export function HistoryCharts({ history, onReload, loading }: HistoryChartsProps
         </div>
       </div>
 
+      <section className="method-note" aria-label="How this history is produced">
+        <h3>How this history is produced</h3>
+        <ol>
+          <li>{history.scoring_note || 'Each point is a purged as-of score: the model was refit with a horizon embargo so labels that would reach into that date are excluded.'}</li>
+          <li>The horizon control chooses which as-of series to load (5d / 10d / 1m / 3m / 6m). Gold bullish remains P(GLD beats gold futures) on that date.</li>
+          <li>The price lines are stored Yahoo Finance closes, rebased only for chart scale. Live desk signals still use full-sample models; this chart does not.</li>
+        </ol>
+      </section>
+
       {stats && (
         <div className="kpi-row">
           <div className="kpi-card">
-            <span className="kpi-label">Latest gold bullish</span>
+            <Tooltip label={METRIC_HELP.bullishLatest}><span className="kpi-label">Latest gold bullish</span></Tooltip>
             <span className="kpi-value gold-text">{stats.latest}%</span>
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">Period avg</span>
+            <Tooltip label={METRIC_HELP.periodAvg}><span className="kpi-label">Period avg</span></Tooltip>
             <span className="kpi-value">{stats.avg}%</span>
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">Range</span>
+            <Tooltip label={METRIC_HELP.range}><span className="kpi-label">Range</span></Tooltip>
             <span className="kpi-value">{stats.min}% – {stats.max}%</span>
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">Change over period</span>
+            <Tooltip label={METRIC_HELP.periodChange}><span className="kpi-label">Change over period</span></Tooltip>
             <span className={`kpi-value ${stats.change >= 0 ? 'highlight' : 'negative-text'}`}>
               {stats.change >= 0 ? '+' : ''}{stats.change}pp
             </span>
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">Data points</span>
+            <Tooltip label={METRIC_HELP.points}><span className="kpi-label">Data points</span></Tooltip>
             <span className="kpi-value">{stats.n_points}</span>
           </div>
         </div>
       )}
 
       <div className="card chart-card" style={{ marginBottom: '1.25rem' }}>
-        <div className="card-title">Gold Outlook Probability ({history.horizon_days}d horizon)</div>
+        <div className="card-title">Gold Outlook Probability ({hLabel})</div>
         <p className="chart-caption" style={{ marginTop: 0, border: 'none', paddingTop: 0, marginBottom: '0.75rem' }}>
-          Model probability that GLD outperforms gold futures over the next {history.horizon_days} trading days.
+          Model probability that GLD outperforms gold futures over the next {history.horizon_days} trading days ({hLabel}).
           50% = neutral baseline.
         </p>
         {goldChart.length > 0 ? (

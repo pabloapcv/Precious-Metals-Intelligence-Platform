@@ -65,13 +65,13 @@ export function PortfolioInstitutional({ research }: PortfolioInstitutionalProps
       </div>
 
       <div className="kpi-row">
-        <Kpi label="Positions" value={String(analytics.n_positions)} />
-        <Kpi label="Exp α (10d)" value={`${(analytics.expected_alpha_10d * 100).toFixed(2)}%`} />
-        <Kpi label="Ann. Vol" value={analytics.annualized_vol != null ? `${(analytics.annualized_vol * 100).toFixed(1)}%` : '—'} />
+        <Kpi label="Positions" value={String(analytics.n_positions)} help={METRIC_HELP.positions} />
+        <Kpi label="Expected alpha (10d)" value={`${(analytics.expected_alpha_10d * 100).toFixed(2)}%`} help={METRIC_HELP.portAlpha} />
+        <Kpi label="Ann. Vol" value={analytics.annualized_vol != null ? `${(analytics.annualized_vol * 100).toFixed(1)}%` : '—'} help={METRIC_HELP.annVol} />
         <Kpi label="Implied Sharpe" value={analytics.implied_sharpe != null ? analytics.implied_sharpe.toFixed(2) : '—'} help={METRIC_HELP.sharpe} />
         <Kpi label="Effective N" value={analytics.effective_n.toFixed(1)} help={METRIC_HELP.effective_n} />
         <Kpi label="HHI" value={analytics.hhi.toFixed(3)} help={METRIC_HELP.hhi} />
-        <Kpi label="Top-3 wt" value={fmtPct(analytics.top3_concentration, 0)} />
+        <Kpi label="Top-3 wt" value={fmtPct(analytics.top3_concentration, 0)} help={METRIC_HELP.top3} />
       </div>
 
       <div className="portfolio-layout">
@@ -117,10 +117,12 @@ export function PortfolioInstitutional({ research }: PortfolioInstitutionalProps
                   </div>
                 </div>
                 <div className="holding-stats">
-                  <span className="mono">{fmtPct(p.weight, 1)}</span>
-                  <span className={`holding-alpha ${p.expected_alpha >= 0 ? 'positive-text' : 'negative-text'}`}>
-                    α {fmtPct(p.expected_alpha)}
-                  </span>
+                  <Tooltip label={METRIC_HELP.weight}><span className="mono">{fmtPct(p.weight, 1)}</span></Tooltip>
+                  <Tooltip label={METRIC_HELP.alpha}>
+                    <span className={`holding-alpha ${p.expected_alpha >= 0 ? 'positive-text' : 'negative-text'}`}>
+                      α {fmtPct(p.expected_alpha)}
+                    </span>
+                  </Tooltip>
                 </div>
               </div>
             ))}

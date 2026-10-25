@@ -1,4 +1,4 @@
-.PHONY: install init-db up down pipeline api frontend frontend-build dev test lint verify
+.PHONY: install init-db up down pipeline api frontend frontend-build dev test lint verify research
 
 PYTHON := .venv/bin/python
 export PYTHONPATH := src
@@ -39,3 +39,6 @@ lint:
 
 verify:
 	$(PYTHON) scripts/verify.py
+
+research:
+	$(PYTHON) scripts/run_research.py

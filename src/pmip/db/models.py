@@ -201,6 +201,62 @@ class ModelPrediction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class PaperAccount(Base):
+  """One paper book per forecast horizon."""
+
+  __tablename__ = "paper_accounts"
+  __table_args__ = (UniqueConstraint("horizon_days", name="uq_paper_horizon"),)
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+  horizon_days: Mapped[int] = mapped_column(Integer, nullable=False)
+  starting_cash: Mapped[float] = mapped_column(Float, nullable=False)
+  cost_bps: Mapped[float] = mapped_column(Float, nullable=False)
+  inception: Mapped[date] = mapped_column(Date, nullable=False)
+  note: Mapped[str] = mapped_column(Text, default="")
+  created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PaperPosition(Base):
+  __tablename__ = "paper_positions"
+  __table_args__ = (UniqueConstraint("account_id", "symbol", name="uq_paper_position"),)
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+  account_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+  symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+  shares: Mapped[float] = mapped_column(Float, nullable=False)
+  avg_cost: Mapped[float] = mapped_column(Float, nullable=False)
+
+
+class PaperOrder(Base):
+  __tablename__ = "paper_orders"
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+  account_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+  date: Mapped[date] = mapped_column(Date, nullable=False)
+  symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+  side: Mapped[str] = mapped_column(String(8), nullable=False)
+  shares: Mapped[float] = mapped_column(Float, nullable=False)
+  price: Mapped[float] = mapped_column(Float, nullable=False)
+  dollars: Mapped[float] = mapped_column(Float, nullable=False)
+  fee: Mapped[float] = mapped_column(Float, nullable=False)
+  reason: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+class PaperNav(Base):
+  __tablename__ = "paper_nav"
+  __table_args__ = (UniqueConstraint("account_id", "date", name="uq_paper_nav"),)
+
+  id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+  account_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+  date: Mapped[date] = mapped_column(Date, nullable=False)
+  nav: Mapped[float] = mapped_column(Float, nullable=False)
+  cash: Mapped[float] = mapped_column(Float, nullable=False)
+  stance: Mapped[str] = mapped_column(String(16), nullable=False)
+  gold_budget: Mapped[float] = mapped_column(Float, nullable=False)
+  benchmark_gold: Mapped[float] = mapped_column(Float, nullable=False)
+  benchmark_spx: Mapped[float] = mapped_column(Float, nullable=False)
+
+
 class PortfolioRecommendation(Base):
     """Daily portfolio optimization output."""
 

@@ -2,8 +2,12 @@ import type { WorkspaceId } from '../types'
 
 const WORKSPACES: { id: WorkspaceId; label: string; code: string }[] = [
   { id: 'command', label: 'Command Center', code: 'CMD' },
+  { id: 'strategies', label: 'Strategy Desk', code: 'STR' },
+  { id: 'allocation', label: 'Gold vs Markets', code: 'ALC' },
+  { id: 'universe', label: 'Metals Book', code: 'MTL' },
   { id: 'signals', label: 'Signal Book', code: 'SIG' },
   { id: 'models', label: 'Model Validation', code: 'MDL' },
+  { id: 'paper', label: 'Paper Books', code: 'PAP' },
   { id: 'portfolio', label: 'Portfolio', code: 'PTF' },
   { id: 'research', label: 'Research Desk', code: 'RSH' },
   { id: 'history', label: 'Historical Outlook', code: 'HST' },

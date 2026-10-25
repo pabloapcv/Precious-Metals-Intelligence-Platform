@@ -60,13 +60,20 @@ def _create_targets(prices: pd.DataFrame, entity: str, horizon: int, benchmark: 
   return targets.dropna()
 
 
-def walk_forward_split(n_samples: int, config: WalkForwardConfig) -> list[tuple[slice, slice]]:
+def walk_forward_split(
+  n_samples: int,
+  config: WalkForwardConfig,
+  embargo: int = 0,
+) -> list[tuple[slice, slice]]:
+  """Walk-forward folds. Embargo drops training rows whose labels overlap the test window."""
   splits = []
-  start = config.train_window
+  start = config.train_window + embargo
   while start + config.test_window <= n_samples:
-    train_slice = slice(start - config.train_window, start)
-    test_slice = slice(start, start + config.test_window)
-    splits.append((train_slice, test_slice))
+    train_end = start - embargo
+    train_start = train_end - config.train_window
+    if train_start < 0:
+      break
+    splits.append((slice(train_start, train_end), slice(start, start + config.test_window)))
     start += config.step_size
   return splits
 
@@ -85,12 +92,13 @@ def adaptive_walk_forward_config(n_samples: int, horizon: int) -> WalkForwardCon
   train = min(252, max(40, int(n_samples * 0.55)))
   test = min(42, max(10, int(n_samples * 0.12)))
   step = min(21, max(5, int(n_samples * 0.08)))
+  embargo = horizon
 
-  while train + test > n_samples and train > 30:
+  while train + embargo + test > n_samples and train > 30:
     train -= 10
     test = max(8, test - 2)
 
-  if train + test > n_samples:
+  if train + embargo + test > n_samples:
     return None
 
   return WalkForwardConfig(train_window=train, test_window=test, step_size=step, horizon=horizon)
@@ -110,7 +118,7 @@ def run_walk_forward_validation(
   y_class = aligned["outperform_gold"].values
   y_reg = aligned["forward_return"].values
 
-  splits = walk_forward_split(len(aligned), config)
+  splits = walk_forward_split(len(aligned), config, embargo=config.horizon)
   fold_metrics = []
 
   for i, (train_sl, test_sl) in enumerate(splits):
@@ -254,8 +262,14 @@ def train_and_save_models(
   }
 
 
-def generate_predictions(session: Session, as_of: date | None = None) -> int:
-  """Generate predictions for all entities and store in DB."""
+def generate_predictions(
+  session: Session,
+  as_of: date | None = None,
+  on_progress=None,
+  entities: list[str] | None = None,
+  horizons: list[int] | None = None,
+) -> int:
+  """Generate predictions for selected entities / horizons and store in DB."""
   settings = get_settings()
   features = load_feature_matrix(session, as_of=as_of)
   if features.empty:
@@ -264,48 +278,75 @@ def generate_predictions(session: Session, as_of: date | None = None) -> int:
   model_dir = Path(settings.model_registry_path)
   count = 0
   latest_features = features.iloc[[-1]]
+  target_entities = entities or [t["entity"] for t in PREDICTION_TARGETS]
+  target_horizons = horizons or list(HORIZONS)
+  jobs = [(entity, h) for entity in target_entities for h in target_horizons]
+  total = len(jobs)
 
-  for target in PREDICTION_TARGETS:
-    entity = target["entity"]
-    for horizon in HORIZONS:
-      meta_path = model_dir / f"{entity}_meta_h{horizon}.pkl"
-      clf_path = model_dir / f"{entity}_clf_h{horizon}.pkl"
-      reg_path = model_dir / f"{entity}_reg_h{horizon}.pkl"
-      if not all(p.exists() for p in (meta_path, clf_path, reg_path)):
-        continue
-
-      meta = joblib.load(meta_path)
-      clf = joblib.load(clf_path)
-      reg = joblib.load(reg_path)
-
-      feat_cols = [c for c in meta["feature_names"] if c in latest_features.columns]
-      if not feat_cols:
-        continue
-      X = latest_features[feat_cols].fillna(0).values
-
-      prob_gold = float(predict_classifier(clf, X)[0])
-      expected_ret = float(predict_regressor(reg, X)[0])
-      pred_date = latest_features.index[-1]
-      d = pred_date.date() if hasattr(pred_date, "date") else pred_date
-
-      record = {
-        "date": d,
-        "entity": entity,
-        "horizon_days": horizon,
-        "prob_outperform_gold": prob_gold,
-        "prob_beat_gdx": prob_gold * 0.95,
-        "expected_return": expected_ret,
-        "expected_alpha": expected_ret - 0.01,
-        "model_version": f"{'lgbm' if LIGHTGBM_AVAILABLE else 'sklearn'}_h{horizon}",
-      }
-      upsert(
-        session,
-        ModelPrediction,
-        [record],
-        "uq_prediction",
-        ["prob_outperform_gold", "prob_beat_gdx", "expected_return", "expected_alpha"],
+  for index, (entity, horizon) in enumerate(jobs, start=1):
+    if on_progress is not None:
+      on_progress(
+        "predict",
+        status="running",
+        action="Scoring latest day",
+        item=f"{entity} · {horizon}d",
+        detail=f"Scoring {entity} {horizon}d on the latest feature row",
+        done=index - 1,
+        total=total,
+        unit="models",
+        entity=entity,
+        horizon=horizon,
       )
-      count += 1
+    meta_path = model_dir / f"{entity}_meta_h{horizon}.pkl"
+    clf_path = model_dir / f"{entity}_clf_h{horizon}.pkl"
+    reg_path = model_dir / f"{entity}_reg_h{horizon}.pkl"
+    if not all(p.exists() for p in (meta_path, clf_path, reg_path)):
+      continue
+
+    meta = joblib.load(meta_path)
+    clf = joblib.load(clf_path)
+    reg = joblib.load(reg_path)
+
+    feat_cols = [c for c in meta["feature_names"] if c in latest_features.columns]
+    if not feat_cols:
+      continue
+    X = latest_features[feat_cols].fillna(0).values
+
+    prob_gold = float(predict_classifier(clf, X)[0])
+    expected_ret = float(predict_regressor(reg, X)[0])
+    pred_date = latest_features.index[-1]
+    d = pred_date.date() if hasattr(pred_date, "date") else pred_date
+
+    record = {
+      "date": d,
+      "entity": entity,
+      "horizon_days": horizon,
+      "prob_outperform_gold": prob_gold,
+      "prob_beat_gdx": prob_gold * 0.95,
+      "expected_return": expected_ret,
+      "expected_alpha": expected_ret - 0.01,
+      "model_version": f"{'lgbm' if LIGHTGBM_AVAILABLE else 'sklearn'}_h{horizon}",
+    }
+    upsert(
+      session,
+      ModelPrediction,
+      [record],
+      "uq_prediction",
+      ["prob_outperform_gold", "prob_beat_gdx", "expected_return", "expected_alpha"],
+    )
+    count += 1
+
+  if on_progress is not None:
+    on_progress(
+      "predict",
+      status="running",
+      action="Predictions written",
+      item=f"{count} rows",
+      detail=f"Wrote {count} latest-day predictions",
+      done=total,
+      total=total,
+      unit="models",
+    )
 
   session.commit()
   return count
@@ -313,82 +354,25 @@ def generate_predictions(session: Session, as_of: date | None = None) -> int:
 
 def backfill_prediction_history(
   session: Session,
-  lookback_days: int = 180,
-  step: int = 5,
+  lookback_days: int = 365,
+  step: int | None = None,
   entities: list[str] | None = None,
   horizons: list[int] | None = None,
+  on_progress=None,
 ) -> int:
-  """Score trained models on historical feature dates so charts have a real time series.
+  """Purged as-of history for charts and paper books.
 
-  Walks backwards through available feature rows every ``step`` trading days
-  and upserts predictions. Uses current model artifacts (point-in-time features,
-  current weights) — suitable for outlook history visualization.
+  At each score date the model is refit with a horizon embargo so labels that
+  would reach into the score date are excluded. Live ``generate_predictions``
+  still uses the full-sample registry models for today's desk signal.
   """
-  settings = get_settings()
-  features = load_feature_matrix(session)
-  if features.empty:
-    return 0
+  from pmip.models.asof import ASOF_ENTITIES, backfill_asof_predictions
 
-  model_dir = Path(settings.model_registry_path)
-  target_entities = entities or [t["entity"] for t in PREDICTION_TARGETS]
-  target_horizons = horizons or list(HORIZONS)
-
-  # Sample every `step` rows within lookback window
-  cutoff = features.index.max() - pd.Timedelta(days=lookback_days)
-  window = features[features.index >= cutoff]
-  if window.empty:
-    window = features
-  sample_idx = window.index[::step]
-  if len(window.index) and window.index[-1] not in sample_idx:
-    sample_idx = sample_idx.append(pd.Index([window.index[-1]]))
-  if len(sample_idx) == 0:
-    return 0
-
-  count = 0
-  backend_tag = "lgbm" if LIGHTGBM_AVAILABLE else "sklearn"
-
-  for entity in target_entities:
-    for horizon in target_horizons:
-      meta_path = model_dir / f"{entity}_meta_h{horizon}.pkl"
-      clf_path = model_dir / f"{entity}_clf_h{horizon}.pkl"
-      reg_path = model_dir / f"{entity}_reg_h{horizon}.pkl"
-      if not all(p.exists() for p in (meta_path, clf_path, reg_path)):
-        continue
-
-      meta = joblib.load(meta_path)
-      clf = joblib.load(clf_path)
-      reg = joblib.load(reg_path)
-      feat_cols = [c for c in meta["feature_names"] if c in features.columns]
-      if not feat_cols:
-        continue
-
-      X = window.loc[sample_idx, feat_cols].fillna(0).values
-      probs = predict_classifier(clf, X)
-      rets = predict_regressor(reg, X)
-
-      records = []
-      for i, ts in enumerate(sample_idx):
-        d = ts.date() if hasattr(ts, "date") else ts
-        records.append({
-          "date": d,
-          "entity": entity,
-          "horizon_days": horizon,
-          "prob_outperform_gold": float(probs[i]),
-          "prob_beat_gdx": float(probs[i]) * 0.95,
-          "expected_return": float(rets[i]),
-          "expected_alpha": float(rets[i]) - 0.01,
-          "model_version": f"{backend_tag}_h{horizon}",
-        })
-
-      upsert(
-        session,
-        ModelPrediction,
-        records,
-        "uq_prediction",
-        ["prob_outperform_gold", "prob_beat_gdx", "expected_return", "expected_alpha"],
-      )
-      count += len(records)
-
-  session.commit()
-  logger.info("Backfilled %d historical prediction rows", count)
-  return count
+  return backfill_asof_predictions(
+    session,
+    lookback_days=lookback_days,
+    step=step,
+    entities=entities or ASOF_ENTITIES,
+    horizons=horizons,
+    on_progress=on_progress,
+  )

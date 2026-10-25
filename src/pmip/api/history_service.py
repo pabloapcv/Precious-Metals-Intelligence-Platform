@@ -7,14 +7,15 @@ from datetime import date, timedelta
 from sqlalchemy.orm import Session
 
 from pmip.api.research_service import _safe_float, get_macro_series, get_regime_history
-from pmip.constants import PREDICTION_TARGETS
+from pmip.constants import HORIZONS, PREDICTION_TARGETS, horizon_label
 from pmip.db.models import ModelPrediction
+from pmip.models.asof import ASOF_ENTITIES, asof_model_version, is_asof_version
 from pmip.models.training import backfill_prediction_history
 
 
 LABEL_MAP = {t["entity"]: t for t in PREDICTION_TARGETS}
 
-KEY_ENTITIES = ["GLD", "GDX", "GDXJ", "RING", "NEM", "AEM", "B", "KGC", "AGI"]
+KEY_ENTITIES = [e for e in ASOF_ENTITIES if e in {"GLD", "GDX", "GDXJ", "RING", "NEM", "AEM", "B", "KGC", "AGI"}]
 
 
 def _prediction_series(
@@ -34,9 +35,11 @@ def _prediction_series(
     .order_by(ModelPrediction.date)
     .all()
   )
-  # Deduplicate by date (keep latest model_version if multiples)
+  # Prefer purged as-of scores; fall back to any version only if none exist.
+  asof_rows = [r for r in rows if is_asof_version(r.model_version)]
+  use_rows = asof_rows or rows
   by_date: dict[str, dict] = {}
-  for r in rows:
+  for r in use_rows:
     by_date[r.date.isoformat()] = {
       "date": r.date.isoformat(),
       "prob_outperform_gold": _safe_float(r.prob_outperform_gold, None),
@@ -44,29 +47,35 @@ def _prediction_series(
       "expected_alpha": _safe_float(r.expected_alpha, None),
       "expected_return": _safe_float(r.expected_return, None),
       "bullish_pct": round(_safe_float(r.prob_outperform_gold, 0.5) * 100, 1),
+      "model_version": r.model_version,
+      "as_of": is_asof_version(r.model_version),
     }
   return [by_date[k] for k in sorted(by_date)]
 
 
 def get_history(
   session: Session,
-  days: int = 180,
+  days: int = 365,
   horizon: int = 10,
   ensure_backfill: bool = True,
 ) -> dict:
   """Build historical chart payload for the History workspace."""
-  # Auto-backfill if we have too few gold outlook points for a useful chart
+  version = asof_model_version(horizon)
   gld_count = (
     session.query(ModelPrediction)
-    .filter(ModelPrediction.entity == "GLD", ModelPrediction.horizon_days == horizon)
+    .filter(
+      ModelPrediction.entity == "GLD",
+      ModelPrediction.horizon_days == horizon,
+      ModelPrediction.model_version == version,
+    )
     .count()
   )
   backfilled = 0
-  if ensure_backfill and gld_count < 15:
+  if ensure_backfill and gld_count < 8:
     backfilled = backfill_prediction_history(
       session,
       lookback_days=days,
-      step=5,
+      step=horizon,
       entities=KEY_ENTITIES,
       horizons=[horizon],
     )
@@ -102,8 +111,17 @@ def get_history(
   return {
     "as_of": gold[-1]["date"] if gold else date.today().isoformat(),
     "horizon_days": horizon,
+    "horizon_label": horizon_label(horizon),
+    "available_horizons": list(HORIZONS),
+    "horizon_labels": {str(h): horizon_label(h) for h in HORIZONS},
     "lookback_days": days,
     "backfilled_rows": backfilled,
+    "scoring": "asof_embargo",
+    "scoring_note": (
+      "Each point is a purged as-of score: the model was refit using only labels "
+      f"fully observed at least {horizon} trading days before that date "
+      f"({horizon_label(horizon)} horizon)."
+    ),
     "gold_outlook": gold,
     "gold_stats": gold_stats,
     "entity_outlook": {

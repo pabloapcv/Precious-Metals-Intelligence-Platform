@@ -1,3 +1,4 @@
+import { ColumnGuide } from '../components/ColumnGuide'
 import type { ResearchData } from '../types'
 import { METRIC_HELP, fmtPct } from '../utils'
 import { Tooltip } from '../components/Tooltip'
@@ -7,28 +8,88 @@ interface ModelValidationProps {
 }
 
 export function ModelValidation({ research }: ModelValidationProps) {
-  const { model_catalog: models, model_summary: summary } = research
+  const { model_catalog: models, model_summary: summary, purged_evidence: evidence, integrity } = research
 
   return (
     <div className="workspace">
       <div className="workspace-head">
         <div>
           <h2 className="workspace-title">Model Validation</h2>
-          <p className="workspace-sub">Walk-forward classifier performance · model lineage · prediction freshness</p>
+          <p className="workspace-sub">Cite the purged table · operational catalog is secondary · history/paper use as-of scores</p>
         </div>
       </div>
 
+      {evidence && (
+        <section className="method-note" aria-label="Purged evidence to cite">
+          <h3>Evidence to cite</h3>
+          <p className="explain-intro">{evidence.note}</p>
+          <p className="row-sub">
+            Generated {evidence.generated_at?.slice(0, 10)} · {evidence.horizon_days}d horizon · {evidence.cost_bps} bps flip cost
+            {integrity ? ` · history/paper = ${integrity.history_scoring}` : ''}
+          </p>
+          <div className="table-wrap" style={{ marginTop: '0.75rem' }}>
+            <table className="data-table institutional">
+              <thead>
+                <tr>
+                  <th>Study</th>
+                  <th className="num">OOS dates</th>
+                  <th className="num">HGB AUC</th>
+                  <th className="num">HGB acc</th>
+                  <th>Best book (after cost)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {evidence.studies.map((study) => {
+                  const best = [...study.books]
+                    .filter((b) => b.total_return != null)
+                    .sort((a, b) => (b.total_return ?? 0) - (a.total_return ?? 0))[0]
+                  return (
+                    <tr key={study.name}>
+                      <td>
+                        <span className="mono gold-text">{study.name}</span>
+                        <span className="row-sub">{study.question}</span>
+                      </td>
+                      <td className="num mono">{study.n_oos}</td>
+                      <td className="num mono">{study.auc != null ? study.auc.toFixed(3) : '—'}</td>
+                      <td className="num mono">{study.accuracy != null ? fmtPct(study.accuracy, 0) : '—'}</td>
+                      <td className="mono">
+                        {best
+                          ? `${best.name.replace(/_/g, ' ')} · ${((best.total_return ?? 0) * 100).toFixed(1)}%`
+                          : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <div className="kpi-row">
-        <Kpi label="Models deployed" value={String(summary.n_models)} />
+        <Kpi label="Models deployed" value={String(summary.n_models)} help="How many entity-and-horizon model files are saved and listed below." />
         <Kpi
           label="Mean walk-forward AUC"
           value={summary.mean_auc != null ? summary.mean_auc.toFixed(3) : '—'}
           help={METRIC_HELP.auc}
           highlight={summary.mean_auc != null && summary.mean_auc >= 0.6}
         />
-        <Kpi label="Horizons" value={summary.horizons.join(' / ') + 'd'} />
-        <Kpi label="Backend" value={summary.backends.join(', ') || '—'} />
+        <Kpi
+          label="Horizons"
+          value={(summary.horizons || []).map((h) => summary.horizon_labels?.[String(h)] ?? `${h}d`).join(' · ') || '—'}
+          help={METRIC_HELP.horizon}
+        />
+        <Kpi label="Backend" value={summary.backends.join(', ') || '—'} help={METRIC_HELP.backend} />
       </div>
+
+      <ColumnGuide items={[
+        { term: 'Walk-forward AUC', text: METRIC_HELP.auc },
+        { term: 'Walk-forward accuracy', text: METRIC_HELP.accuracy },
+        { term: 'Folds', text: METRIC_HELP.folds },
+        { term: 'Latest P', text: METRIC_HELP.latestP },
+        { term: 'Horizon', text: METRIC_HELP.horizon },
+        { term: 'Model', text: METRIC_HELP.model },
+      ]} />
 
       <div className="card table-card">
         <div className="card-title">Model Catalog</div>
@@ -36,16 +97,16 @@ export function ModelValidation({ research }: ModelValidationProps) {
           <table className="data-table institutional">
             <thead>
               <tr>
-                <th>Entity</th>
-                <th>Horizon</th>
-                <th>Backend</th>
-                <th className="num">Features</th>
+                <th><Tooltip label={METRIC_HELP.entity}><span>Entity</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.horizon}><span>Horizon</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.backend}><span>Backend</span></Tooltip></th>
+                <th className="num"><Tooltip label={METRIC_HELP.features}><span>Features</span></Tooltip></th>
                 <th className="num"><Tooltip label={METRIC_HELP.auc}><span>WF AUC</span></Tooltip></th>
-                <th className="num">WF Acc</th>
-                <th className="num">Folds</th>
-                <th className="num">Latest P</th>
-                <th>Trained</th>
-                <th>Status</th>
+                <th className="num"><Tooltip label={METRIC_HELP.accuracy}><span>WF Acc</span></Tooltip></th>
+                <th className="num"><Tooltip label={METRIC_HELP.folds}><span>Folds</span></Tooltip></th>
+                <th className="num"><Tooltip label={METRIC_HELP.latestP}><span>Latest P</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.trained}><span>Trained</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.status}><span>Status</span></Tooltip></th>
               </tr>
             </thead>
             <tbody>
@@ -58,7 +119,7 @@ export function ModelValidation({ research }: ModelValidationProps) {
                       <span className="mono gold-text">{m.entity}</span>
                       <span className="row-sub">{m.label}</span>
                     </td>
-                    <td className="mono">{m.horizon_days}d</td>
+                    <td className="mono">{summary.horizon_labels?.[String(m.horizon_days)] ?? `${m.horizon_days}d`}</td>
                     <td>{m.backend}</td>
                     <td className="num mono">{m.n_features}</td>
                     <td className={`num mono ${m.walk_forward.mean_auc != null && m.walk_forward.mean_auc >= 0.6 ? 'positive-text' : ''}`}>
@@ -89,16 +150,16 @@ export function ModelValidation({ research }: ModelValidationProps) {
         <div className="card-title">Methodology</div>
         <div className="method-grid">
           <MethodBlock
-            title="Walk-forward validation"
-            text="252d train / 42d test / 21d step. Targets: P(outperform gold), P(beat GDX), forward return."
+            title="Purged evidence"
+            text="Gold budget and miner sleeve studies use embargo = horizon, non-overlapping test days, and a 10 bp flip cost. That table is what to cite."
           />
           <MethodBlock
-            title="Feature store"
-            text="Technical, cross-asset, and macro surprise features aligned to prediction date. No lookahead."
+            title="As-of history / paper"
+            text="History charts and paper books refit at each score date with a horizon embargo. Live signals still use the full-sample registry models."
           />
           <MethodBlock
-            title="Regime conditioning"
-            text="HMM regime detection on macro state vector — used for agent scoring and hypothesis context."
+            title="Operational catalog"
+            text="The rows below are the deployed entity×horizon files and their walk-forward diagnostics. Useful for lineage; not the economic proof."
           />
         </div>
       </div>

@@ -10,10 +10,17 @@ interface RiskSectionProps {
 }
 
 const RISK_LABELS: Record<string, string> = {
-  war_probability: 'War probability',
+  war_probability: 'War flag',
   oil_disruption: 'Oil disruption',
   central_bank_buying: 'Central bank buying',
   etf_flows: 'ETF flows',
+}
+
+const RISK_HELP: Record<string, string> = {
+  war_probability: METRIC_HELP.gpr,
+  oil_disruption: METRIC_HELP.oilDisruption,
+  central_bank_buying: METRIC_HELP.cbBuying,
+  etf_flows: METRIC_HELP.etfFlow,
 }
 
 export function RiskSection({ risk, etfFlows, centralBanks, agentScores }: RiskSectionProps) {
@@ -39,7 +46,9 @@ export function RiskSection({ risk, etfFlows, centralBanks, agentScores }: RiskS
           <div className="risk-grid">
             {riskItems.map(([key, val]) => (
               <div key={key} className="risk-card">
-                <span className="risk-label">{RISK_LABELS[key] || key.replace(/_/g, ' ')}</span>
+                <Tooltip label={RISK_HELP[key] || METRIC_HELP.gpr}>
+                  <span className="risk-label">{RISK_LABELS[key] || key.replace(/_/g, ' ')}</span>
+                </Tooltip>
                 <span className={`risk-badge ${signalClass(String(val))}`}>{String(val)}</span>
               </div>
             ))}
@@ -52,7 +61,7 @@ export function RiskSection({ risk, etfFlows, centralBanks, agentScores }: RiskS
               <span className="value gold-text">{fmt(risk.gpr_index as number)}</span>
             </div>
             <div className="risk-metric">
-              <span className="label">Conflict intensity</span>
+              <Tooltip label={METRIC_HELP.conflict}><span className="label">Conflict intensity</span></Tooltip>
               <span className="value">{fmt(risk.conflict_intensity as number)}</span>
             </div>
           </div>
@@ -61,23 +70,26 @@ export function RiskSection({ risk, etfFlows, centralBanks, agentScores }: RiskS
         <div className="card">
           <div className="card-title">ETF Flows (GLD / IAU)</div>
           <div className="flow-stats">
-            <FlowStat label="GLD daily" value={`${fmt(etfFlows.gld_daily_m as number, 1)}M`} />
-            <FlowStat label="GLD 30d avg" value={`${fmt(etfFlows.gld_30d_avg_m as number, 1)}M`} />
-            <FlowStat label="IAU daily" value={`${fmt(etfFlows.iau_daily_m as number, 1)}M`} />
+            <FlowStat label="GLD daily" value={`${fmt(etfFlows.gld_daily_m as number, 1)}M`} help={METRIC_HELP.etfFlow} />
+            <FlowStat label="GLD 30d avg" value={`${fmt(etfFlows.gld_30d_avg_m as number, 1)}M`} help="Average of the estimated daily GLD flow over the last 30 observations, in millions of dollars." />
+            <FlowStat label="IAU daily" value={`${fmt(etfFlows.iau_daily_m as number, 1)}M`} help="Estimated daily flow into the IAU gold trust, in millions of dollars." />
             <FlowStat
               label="Signal"
               value={String(etfFlows.signal)}
               highlight={signalClass(String(etfFlows.signal))}
+              help={METRIC_HELP.etfFlow}
             />
           </div>
         </div>
 
         <div className="card">
-          <div className="card-title">Central Bank Buying</div>
+          <div className="card-title">
+            <Tooltip label={METRIC_HELP.cbBuying}><span>Central Bank Buying</span></Tooltip>
+          </div>
           <div className="metric-value gold" style={{ fontSize: '1.75rem' }}>
             {fmt(centralBanks.recent_purchases_tonnes, 0)}t
           </div>
-          <div className="metric-label">Recent monthly purchases</div>
+          <Tooltip label={METRIC_HELP.cbTonnes}><div className="metric-label">Recent monthly purchases</div></Tooltip>
           <ul className="cb-list">
             {centralBanks.top_buyers.map((b) => (
               <li key={b.country}>
@@ -101,14 +113,16 @@ function FlowStat({
   label,
   value,
   highlight,
+  help,
 }: {
   label: string
   value: string
   highlight?: string
+  help?: string
 }) {
   return (
     <div className="flow-stat">
-      <span className="label">{label}</span>
+      {help ? <Tooltip label={help}><span className="label">{label}</span></Tooltip> : <span className="label">{label}</span>}
       <span className={`value ${highlight || ''}`}>{value}</span>
     </div>
   )

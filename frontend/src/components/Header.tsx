@@ -5,14 +5,14 @@ interface HeaderProps {
   refreshing: boolean
   pipelineRunning: boolean
   onRefresh: () => void
-  onRunPipeline: () => void
+  onOpenPipeline: () => void
 }
 
 export function Header({
   refreshing,
   pipelineRunning,
   onRefresh,
-  onRunPipeline,
+  onOpenPipeline,
 }: HeaderProps) {
   return (
     <header className="top-bar">
@@ -32,7 +32,7 @@ export function Header({
         <button
           type="button"
           className="btn btn-sm"
-          onClick={onRunPipeline}
+          onClick={onOpenPipeline}
           disabled={pipelineRunning || refreshing}
         >
           {pipelineRunning ? (
