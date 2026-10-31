@@ -1,0 +1,25 @@
+---
+description: Commit messages must list exactly what changed
+alwaysApply: true
+---
+
+# Commit messages
+
+When creating a git commit, write the message so it states **exactly the changes that were made** (what files/areas and what was done), not a vague summary or only the why.
+
+## Format
+
+- Subject line: concrete list or short inventory of the changes.
+- Optional body: bullets naming the concrete edits if the subject cannot fit them all.
+- Prefer precise verbs: add, update, fix, remove, rename — tied to the actual change.
+
+## Examples
+
+```text
+✅ Add live/as-of filters to signal book, allocation, dashboard, and HRP optimizer; badge scoring paths in Signal Book; add Risk seed/proxy labels; empty-state pipeline CTAs; PRD and contract tests.
+
+❌ Close v1 honesty gaps.
+❌ Improve research desk integrity.
+```
+
+Do not substitute a high-level “why” message for a description of the actual diff.
