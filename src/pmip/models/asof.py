@@ -54,6 +54,57 @@ def is_asof_version(version: str | None) -> bool:
   return bool(version) and str(version).startswith("asof_h")
 
 
+def is_live_version(version: str | None) -> bool:
+  """Full-sample desk registry models (not purged as-of history scores)."""
+  return not is_asof_version(version)
+
+
+def scoring_path_for_version(version: str | None) -> str:
+  return "asof_embargo" if is_asof_version(version) else "full_sample_live"
+
+
+def latest_live_prediction(session, *, entity: str, horizon: int):
+  """Newest non-as-of prediction row for the live desk."""
+  from pmip.db.models import ModelPrediction
+
+  rows = (
+    session.query(ModelPrediction)
+    .filter(ModelPrediction.entity == entity, ModelPrediction.horizon_days == horizon)
+    .order_by(ModelPrediction.date.desc(), ModelPrediction.id.desc())
+    .all()
+  )
+  for row in rows:
+    if is_live_version(row.model_version):
+      return row
+  return None
+
+
+def latest_live_predictions(session, *, entities: list[str], horizon: int) -> list:
+  """Latest live row per entity, sorted by expected alpha descending."""
+  from pmip.db.models import ModelPrediction
+
+  rows = (
+    session.query(ModelPrediction)
+    .filter(
+      ModelPrediction.entity.in_(entities),
+      ModelPrediction.horizon_days == horizon,
+    )
+    .order_by(ModelPrediction.date.desc(), ModelPrediction.id.desc())
+    .all()
+  )
+  latest: dict[str, object] = {}
+  for row in rows:
+    if not is_live_version(row.model_version):
+      continue
+    if row.entity not in latest:
+      latest[row.entity] = row
+  return sorted(
+    latest.values(),
+    key=lambda r: float(getattr(r, "expected_alpha", None) or 0.0),
+    reverse=True,
+  )
+
+
 class _Clf:
   def __init__(self, model: HistGradientBoostingClassifier):
     self._model = model

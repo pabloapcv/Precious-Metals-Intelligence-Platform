@@ -5,9 +5,10 @@ import { Tooltip } from '../components/Tooltip'
 
 interface ModelValidationProps {
   research: ResearchData
+  onOpenPipeline?: () => void
 }
 
-export function ModelValidation({ research }: ModelValidationProps) {
+export function ModelValidation({ research, onOpenPipeline }: ModelValidationProps) {
   const { model_catalog: models, model_summary: summary, purged_evidence: evidence, integrity } = research
 
   return (
@@ -18,6 +19,18 @@ export function ModelValidation({ research }: ModelValidationProps) {
           <p className="workspace-sub">Cite the purged table · operational catalog is secondary · history/paper use as-of scores</p>
         </div>
       </div>
+
+      {!evidence && (
+        <div className="card empty-state" style={{ marginBottom: '1.25rem' }}>
+          <p>No purged research table yet.</p>
+          <p className="empty-hint">Run <code>make research</code> (or the research stage) to write docs/research/results.json.</p>
+          {onOpenPipeline ? (
+            <button type="button" className="btn btn-sm" onClick={onOpenPipeline} style={{ marginTop: '0.75rem' }}>
+              Run pipeline
+            </button>
+          ) : null}
+        </div>
+      )}
 
       {evidence && (
         <section className="method-note" aria-label="Purged evidence to cite">
@@ -111,7 +124,16 @@ export function ModelValidation({ research }: ModelValidationProps) {
             </thead>
             <tbody>
               {models.length === 0 ? (
-                <tr><td colSpan={10} className="empty-row">No models in registry — run pipeline.</td></tr>
+                <tr>
+                  <td colSpan={10} className="empty-row">
+                    No models in registry.{' '}
+                    {onOpenPipeline ? (
+                      <button type="button" className="btn btn-sm" onClick={onOpenPipeline}>Run pipeline</button>
+                    ) : (
+                      'Run pipeline.'
+                    )}
+                  </td>
+                </tr>
               ) : (
                 models.map((m) => (
                   <tr key={`${m.entity}-${m.horizon_days}`}>

@@ -47,4 +47,6 @@ Use this in a meeting. The longer explanation of every page is in [executive-pla
 
 ## The chart caveat
 
-The historical gold line shows what **today’s models would have said** on earlier dates. It is not a log of calls that were published at the time.
+The historical gold line uses **purged as-of scores**: at each date the model was refit with a horizon embargo so labels that would reach into that date were excluded. It is not today’s live model replayed on old features, and it is not a log of calls that were published at the time.
+
+**Live vs paper:** Signal Book and Strategy sleeve use full-sample live registry models. History charts and paper books use as-of scores only.

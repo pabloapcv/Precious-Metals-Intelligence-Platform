@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { EmptyWorkspace } from './components/EmptyWorkspace'
 import { Header } from './components/Header'
 import { PipelineRunModal } from './components/PipelineRunModal'
 import { PipelineTracker } from './components/PipelineTracker'
@@ -114,53 +115,106 @@ export default function App() {
 
         <div className="workspace-content">
           {workspace === 'command' && <CommandCenter data={dashboard} allocation={allocation} />}
-          {workspace === 'strategies' && strategies && <StrategyDesk strategies={strategies} />}
+          {workspace === 'strategies' && strategies && (
+            <StrategyDesk strategies={strategies} onOpenPipeline={() => setPipelineModalOpen(true)} />
+          )}
           {workspace === 'strategies' && !strategies && (
-            <div className="workspace">
-              <div className="empty-state"><p>Composing strategy playbooks…</p></div>
-            </div>
+            <EmptyWorkspace
+              title="Strategy playbooks unavailable."
+              hint="Run the pipeline so allocation, signals, and paper books can compose suggestions."
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+            />
           )}
           {workspace === 'allocation' && allocation && <AllocationDesk allocation={allocation} />}
           {workspace === 'allocation' && !allocation && (
-            <div className="workspace">
-              <div className="empty-state">
-                <p>Comparing gold with stocks, oil, and copper…</p>
-              </div>
-            </div>
+            <EmptyWorkspace
+              title="Gold vs Markets unavailable."
+              hint="Run the pipeline to compare gold with stocks, oil, and copper."
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+            />
           )}
           {workspace === 'universe' && universe && <MetalsBook universe={universe} />}
           {workspace === 'universe' && !universe && (
-            <div className="workspace">
-              <div className="empty-state"><p>Loading the metals book…</p></div>
-            </div>
+            <EmptyWorkspace
+              title="Metals book unavailable."
+              hint="Run the pipeline to load the instrument universe."
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+            />
           )}
-          {workspace === 'signals' && research && <SignalBook research={research} />}
-          {workspace === 'models' && research && <ModelValidation research={research} />}
-          {workspace === 'paper' && paper && <PaperBook paper={paper} />}
+          {workspace === 'signals' && research && (
+            <SignalBook research={research} onOpenPipeline={() => setPipelineModalOpen(true)} />
+          )}
+          {workspace === 'signals' && !research && (
+            <EmptyWorkspace
+              title="Signal book unavailable."
+              hint="Run the pipeline to train models and score the sleeve."
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+            />
+          )}
+          {workspace === 'models' && research && (
+            <ModelValidation research={research} onOpenPipeline={() => setPipelineModalOpen(true)} />
+          )}
+          {workspace === 'models' && !research && (
+            <EmptyWorkspace
+              title="Model registry unavailable."
+              hint="Run the pipeline, then make research for purged evidence."
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+            />
+          )}
+          {workspace === 'paper' && paper && (
+            <PaperBook paper={paper} onOpenPipeline={() => setPipelineModalOpen(true)} />
+          )}
           {workspace === 'paper' && !paper && (
-            <div className="workspace"><div className="empty-state"><p>Marking the paper books…</p></div></div>
+            <EmptyWorkspace
+              title="Paper books unavailable."
+              hint="Run the history and paper stages so as-of scores can mark the books."
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+            />
           )}
-          {workspace === 'portfolio' && research && <PortfolioInstitutional research={research} />}
+          {workspace === 'portfolio' && research && (
+            <PortfolioInstitutional research={research} onOpenPipeline={() => setPipelineModalOpen(true)} />
+          )}
+          {workspace === 'portfolio' && !research && (
+            <EmptyWorkspace
+              title="Portfolio unavailable."
+              hint="Run the pipeline to generate HRP allocations."
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+            />
+          )}
           {workspace === 'research' && research && (
             <ResearchDesk dashboard={dashboard} research={research} />
+          )}
+          {workspace === 'research' && !research && (
+            <EmptyWorkspace
+              title="Research desk unavailable."
+              hint="Run the pipeline to load regime history and macro series."
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+            />
           )}
           {workspace === 'history' && history && (
             <HistoryCharts
               history={history}
               loading={historyLoading}
               onReload={(days, horizon) => fetchHistory(days, horizon, false)}
+              onOpenPipeline={() => setPipelineModalOpen(true)}
             />
           )}
           {workspace === 'history' && !history && (
-            <div className="workspace">
-              <div className="empty-state">
-                <p>{historyLoading ? 'Building historical outlook series…' : 'History unavailable.'}</p>
-                <p className="empty-hint">First load backfills prediction history from trained models.</p>
-              </div>
-            </div>
+            <EmptyWorkspace
+              title={historyLoading ? 'Building historical outlook series…' : 'History unavailable.'}
+              hint="Run the history stage to backfill purged as-of scores."
+              onOpenPipeline={historyLoading ? undefined : () => setPipelineModalOpen(true)}
+            />
           )}
           {workspace === 'explain' && explain && (
             <Explainability explain={explain} dashboard={dashboard} />
+          )}
+          {workspace === 'explain' && !explain && (
+            <EmptyWorkspace
+              title="Explainability unavailable."
+              hint="Run the pipeline so the explanation page can mirror live figures."
+              onOpenPipeline={() => setPipelineModalOpen(true)}
+            />
           )}
           {workspace === 'risk' && (
             <div className="workspace">

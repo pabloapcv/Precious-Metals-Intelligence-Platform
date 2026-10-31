@@ -21,14 +21,22 @@ function pct(n: number) {
   return `${n >= 0 ? '+' : ''}${(n * 100).toFixed(1)}%`
 }
 
-export function PaperBook({ paper }: { paper: PaperData }) {
+export function PaperBook({ paper, onOpenPipeline }: { paper: PaperData; onOpenPipeline?: () => void }) {
   const labels = paper.horizon_labels
   const [horizon, setHorizon] = useState(paper.accounts.find((a) => a.horizon_days === 10)?.horizon_days ?? paper.accounts[0]?.horizon_days)
   const account = paper.accounts.find((item) => item.horizon_days === horizon) ?? paper.accounts[0]
   if (!account) {
     return (
       <div className="workspace">
-        <div className="empty-state"><p>Paper books have not been marked yet.</p></div>
+        <div className="empty-state">
+          <p>Paper books have not been marked yet.</p>
+          <p className="empty-hint">Run the history / paper stages so as-of scores can mark the books.</p>
+          {onOpenPipeline ? (
+            <button type="button" className="btn btn-sm" onClick={onOpenPipeline} style={{ marginTop: '0.75rem' }}>
+              Run pipeline
+            </button>
+          ) : null}
+        </div>
       </div>
     )
   }
@@ -62,6 +70,10 @@ export function PaperBook({ paper }: { paper: PaperData }) {
       <section className="method-note">
         <h3>How the {accountLabel} book is traded</h3>
         <p className="explain-intro">{paper.note}</p>
+        <p className="explain-intro">
+          <span className="source-badge asof">as-of</span> scores only.
+          Last stance is not the same object as Gold vs Markets (trailing SPX here vs 10-day SPX model there).
+        </p>
       </section>
 
       <div className="kpi-row">

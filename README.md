@@ -7,7 +7,7 @@ It answers two questions a gold book actually faces:
 1. **Gold budget.** Over the next few weeks, should exposure to gold be larger or smaller versus equities (and the rest of a multi-asset book)?
 2. **Gold sleeve.** Given that budget, how should it be split between bullion and miners / royalties?
 
-The screen is a decision desk. The evidence behind it is a purged walk-forward study with embargo, baselines, and turnover costs. Several on-screen figures are explicit rules rather than measured probabilities; the [claim inventory](docs/research-note.md) says which is which.
+The screen is a decision desk. The evidence behind it is a purged walk-forward study with embargo, baselines, and turnover costs. Several on-screen figures are explicit rules rather than measured probabilities; the [claim inventory](docs/research-note.md) says which is which. Full product requirements: [docs/PRD.md](docs/PRD.md).
 
 ---
 
@@ -230,7 +230,7 @@ Also see [docs/executive-platform-guide.md](docs/executive-platform-guide.md) an
 - Sample length is still short relative to institutional backtests.
 - Without FRED, real yields are estimated.
 - Central-bank and miner-fundamental tables are **seeds**, not live vendor feeds.
-- Live signal book uses **full-sample** registry models; paper / history use **as-of** scores.
+- Live signal book / Strategy sleeve use **full-sample** registry models (UI badges `live`); paper / history use **as-of** scores (`as-of`). See [docs/numbers-at-a-glance.md](docs/numbers-at-a-glance.md).
 - Paper books are shadow simulations (10 bps, liquid sleeve, rule-based stance) — not audited live track record.
 - Geopolitical risk is a **proxy**, not a news NLP feed.
 

@@ -4,6 +4,7 @@ import { fmtPct } from '../utils'
 
 interface StrategyDeskProps {
   strategies: StrategyData
+  onOpenPipeline?: () => void
 }
 
 const TAG_LABEL: Record<string, string> = {
@@ -48,7 +49,7 @@ function PlaybookCard({
   )
 }
 
-export function StrategyDesk({ strategies }: StrategyDeskProps) {
+export function StrategyDesk({ strategies, onOpenPipeline }: StrategyDeskProps) {
   const primaryId = strategies.primary
   const [selectedId, setSelectedId] = useState(primaryId ?? strategies.strategies[0]?.id)
   const selected =
@@ -68,6 +69,11 @@ export function StrategyDesk({ strategies }: StrategyDeskProps) {
         <div className="empty-state">
           <p>No strategy playbooks yet.</p>
           <p className="empty-hint">Run the pipeline so allocation, signals, and paper books can compose suggestions.</p>
+          {onOpenPipeline ? (
+            <button type="button" className="btn btn-sm" onClick={onOpenPipeline} style={{ marginTop: '0.75rem' }}>
+              Run pipeline
+            </button>
+          ) : null}
         </div>
       </div>
     )
@@ -79,7 +85,8 @@ export function StrategyDesk({ strategies }: StrategyDeskProps) {
         <div>
           <h2 className="workspace-title">Strategy Desk</h2>
           <p className="workspace-sub">
-            Ranked playbooks from today’s stance, signal book, regime, and paper paths.
+            Ranked playbooks from today’s stance, <span className="source-badge live">live</span> signal
+            sleeve, regime, and <span className="source-badge asof">as-of</span> paper paths.
             {strategies.as_of ? ` As of ${strategies.as_of}.` : ''}
           </p>
         </div>
@@ -88,6 +95,10 @@ export function StrategyDesk({ strategies }: StrategyDeskProps) {
       <section className="method-note" aria-label="How strategies are suggested">
         <h3>How these suggestions are built</h3>
         <p className="explain-intro">{strategies.note}</p>
+        <p className="explain-intro">
+          Sleeve names come from the live full-sample signal book (10d long/OW ≤8). Horizon ranking and
+          paper evidence use purged as-of scores. Do not treat the primary playbook as a purged track record.
+        </p>
       </section>
 
       <div className="kpi-row">

@@ -13,9 +13,10 @@ const PIE_COLORS = ['#d4a843', '#60a5fa', '#34d399', '#a78bfa', '#f87171', '#94a
 
 interface PortfolioInstitutionalProps {
   research: ResearchData
+  onOpenPipeline?: () => void
 }
 
-export function PortfolioInstitutional({ research }: PortfolioInstitutionalProps) {
+export function PortfolioInstitutional({ research, onOpenPipeline }: PortfolioInstitutionalProps) {
   const { portfolio_analytics: pa } = research
   const { positions, analytics, method, as_of: asOf } = pa
 
@@ -27,7 +28,12 @@ export function PortfolioInstitutional({ research }: PortfolioInstitutionalProps
         </div>
         <div className="card empty-state">
           <p>No portfolio recommendations.</p>
-          <p className="empty-hint">Run pipeline to generate HRP-optimized allocations.</p>
+          <p className="empty-hint">Run pipeline to generate HRP-optimized allocations from live desk scores.</p>
+          {onOpenPipeline ? (
+            <button type="button" className="btn btn-sm" onClick={onOpenPipeline} style={{ marginTop: '0.75rem' }}>
+              Run pipeline
+            </button>
+          ) : null}
         </div>
       </div>
     )

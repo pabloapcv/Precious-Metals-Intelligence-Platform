@@ -64,6 +64,7 @@ export interface SignalRow {
   expected_return: number
   expected_alpha: number
   model_version: string
+  scoring_path?: string
   date: string
   signal: string
 }
@@ -84,6 +85,7 @@ export interface ModelRecord {
   }
   latest_prediction_date: string | null
   latest_prob: number | null
+  scoring_path?: string
 }
 
 export interface PortfolioAnalytics {
@@ -344,6 +346,8 @@ export interface AllocationData {
   reasons: string[]
   gold_expected_return: number | null
   gold_method: string
+  gold_model_version?: string | null
+  scoring_path?: string | null
   real_yield: number | null
   real_yield_source: string | null
   yield_role: 'headwind' | 'support' | 'neutral'

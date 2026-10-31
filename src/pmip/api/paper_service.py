@@ -39,7 +39,10 @@ NOTE = (
   "the gold sleeve, Keep 30%, Reduce 10%, and the rest in the S&P 500. The gold "
   "sleeve equal-weights liquid names marked long or overweight, up to eight. "
   "Trades use that day's close and pay 10 basis points on the dollars traded. "
-  "Live desk signals still use full-sample models; this path tests the as-of scores only."
+  "Live desk signals still use full-sample models; this path tests the as-of scores only. "
+  "Last stance here compares gold’s as-of expected return with SPX’s trailing return "
+  "plus yield/dollar/regime rules — it is not the same object as Gold vs Markets, "
+  "which uses a 10-day SPX model forecast."
 )
 
 

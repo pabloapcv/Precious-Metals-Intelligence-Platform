@@ -85,13 +85,10 @@ def optimize_portfolio(
   if returns.empty or len(returns.columns) < 2:
     return pd.DataFrame()
 
-  # Get latest predictions for expected returns
-  preds = (
-    session.query(ModelPrediction)
-    .filter(ModelPrediction.entity.in_(tickers), ModelPrediction.horizon_days == 10)
-    .order_by(ModelPrediction.date.desc())
-    .all()
-  )
+  # Live desk expected returns only — never tilt HRP with purged as-of rows.
+  from pmip.models.asof import latest_live_predictions
+
+  preds = latest_live_predictions(session, entities=tickers, horizon=10)
   expected = pd.Series(
     {p.entity: p.expected_return or 0 for p in preds}
   ).reindex(returns.columns).fillna(returns.mean())

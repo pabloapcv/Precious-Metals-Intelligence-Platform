@@ -35,11 +35,10 @@ def _prediction_series(
     .order_by(ModelPrediction.date)
     .all()
   )
-  # Prefer purged as-of scores; fall back to any version only if none exist.
+  # History charts cite purged as-of scores only — never silent full-sample fallback.
   asof_rows = [r for r in rows if is_asof_version(r.model_version)]
-  use_rows = asof_rows or rows
   by_date: dict[str, dict] = {}
-  for r in use_rows:
+  for r in asof_rows:
     by_date[r.date.isoformat()] = {
       "date": r.date.isoformat(),
       "prob_outperform_gold": _safe_float(r.prob_outperform_gold, None),
@@ -48,7 +47,8 @@ def _prediction_series(
       "expected_return": _safe_float(r.expected_return, None),
       "bullish_pct": round(_safe_float(r.prob_outperform_gold, 0.5) * 100, 1),
       "model_version": r.model_version,
-      "as_of": is_asof_version(r.model_version),
+      "as_of": True,
+      "scoring_path": "asof_embargo",
     }
   return [by_date[k] for k in sorted(by_date)]
 

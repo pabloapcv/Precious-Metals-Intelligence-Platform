@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { PipelineStatus } from '../types'
 
 const HEADING: Record<PipelineStatus['status'], string> = {
@@ -6,6 +7,8 @@ const HEADING: Record<PipelineStatus['status'], string> = {
   complete: 'Pipeline complete',
   failed: 'Pipeline stopped',
 }
+
+const COLLAPSE_KEY = 'pmip.pipelineTracker.collapsed'
 
 function formatElapsed(seconds: number | null | undefined): string | null {
   if (seconds == null || seconds < 0) return null
@@ -23,6 +26,22 @@ function stageProgress(stage: PipelineStatus['stages'][number]): string | null {
 }
 
 export function PipelineTracker({ pipeline }: { pipeline: PipelineStatus | null }) {
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return sessionStorage.getItem(COLLAPSE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [collapsed])
+
   if (!pipeline || pipeline.status === 'idle') return null
 
   const current = pipeline.current
@@ -41,7 +60,10 @@ export function PipelineTracker({ pipeline }: { pipeline: PipelineStatus | null 
       : null
 
   return (
-    <section className={`pipeline-tracker tracker-${pipeline.status}`} aria-live="polite">
+    <section
+      className={`pipeline-tracker tracker-${pipeline.status}${collapsed ? ' is-collapsed' : ''}`}
+      aria-live="polite"
+    >
       <div className="tracker-head">
         <strong>
           {HEADING[pipeline.status]}
@@ -50,6 +72,16 @@ export function PipelineTracker({ pipeline }: { pipeline: PipelineStatus | null 
         <span className="tracker-meta">
           {elapsed && <span className="tracker-elapsed">{elapsed}</span>}
           <span className="tracker-percent">{Math.round(pipeline.percent)}%</span>
+          <button
+            type="button"
+            className="tracker-collapse-btn"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-expanded={!collapsed}
+            aria-controls="pipeline-tracker-body"
+            title={collapsed ? 'Expand pipeline tracker' : 'Minimize pipeline tracker'}
+          >
+            {collapsed ? 'Expand' : 'Minimize'}
+          </button>
         </span>
       </div>
       <div
@@ -62,46 +94,54 @@ export function PipelineTracker({ pipeline }: { pipeline: PipelineStatus | null 
         <div className="tracker-bar-fill" style={{ width: `${Math.min(pipeline.percent, 100)}%` }} />
       </div>
 
-      {pipeline.status === 'running' && (
-        <div className="tracker-now">
-          <p className="tracker-message">{currentLine}</p>
-          {currentCount && <span className="tracker-now-count">{currentCount}</span>}
-        </div>
-      )}
-      {pipeline.status !== 'running' && <p className="tracker-message">{pipeline.message}</p>}
+      {!collapsed && (
+        <div id="pipeline-tracker-body" className="tracker-body">
+          {pipeline.status === 'running' && (
+            <div className="tracker-now">
+              <p className="tracker-message">{currentLine}</p>
+              {currentCount && <span className="tracker-now-count">{currentCount}</span>}
+            </div>
+          )}
+          {pipeline.status !== 'running' && <p className="tracker-message">{pipeline.message}</p>}
 
-      <ol className="tracker-stages">
-        {pipeline.stages.map((stage) => {
-          const progress = stageProgress(stage)
-          return (
-            <li key={stage.id} className={`tracker-stage stage-${stage.status}`}>
-              <span className="tracker-stage-label">{stage.label}</span>
-              {stage.detail && <span className="tracker-stage-detail">{stage.detail}</span>}
-              {progress && <span className="tracker-stage-count">{progress}</span>}
-            </li>
-          )
-        })}
-      </ol>
-
-      {showCount && (
-        <p className="tracker-count">
-          {train.done.toLocaleString()} of {train.total.toLocaleString()} models
-          {train.entity ? ` · ${train.entity} ${train.horizon ?? ''}d` : ''}
-        </p>
-      )}
-
-      {log.length > 0 && (
-        <div className="tracker-log" aria-label="Pipeline activity log">
-          <div className="tracker-log-head">Activity</div>
-          <ol className="tracker-log-list">
-            {[...log].reverse().slice(0, 24).map((entry, index) => (
-              <li key={`${entry.at}-${index}`} className="tracker-log-item">
-                <span className="tracker-log-stage">{entry.stage}</span>
-                <span className="tracker-log-text">{entry.text}</span>
-              </li>
-            ))}
+          <ol className="tracker-stages">
+            {pipeline.stages.map((stage) => {
+              const progress = stageProgress(stage)
+              return (
+                <li key={stage.id} className={`tracker-stage stage-${stage.status}`}>
+                  <span className="tracker-stage-label">{stage.label}</span>
+                  {stage.detail && <span className="tracker-stage-detail">{stage.detail}</span>}
+                  {progress && <span className="tracker-stage-count">{progress}</span>}
+                </li>
+              )
+            })}
           </ol>
+
+          {showCount && (
+            <p className="tracker-count">
+              {train.done.toLocaleString()} of {train.total.toLocaleString()} models
+              {train.entity ? ` · ${train.entity} ${train.horizon ?? ''}d` : ''}
+            </p>
+          )}
+
+          {log.length > 0 && (
+            <div className="tracker-log" aria-label="Pipeline activity log">
+              <div className="tracker-log-head">Activity</div>
+              <ol className="tracker-log-list">
+                {[...log].reverse().slice(0, 24).map((entry, index) => (
+                  <li key={`${entry.at}-${index}`} className="tracker-log-item">
+                    <span className="tracker-log-stage">{entry.stage}</span>
+                    <span className="tracker-log-text">{entry.text}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </div>
+      )}
+
+      {collapsed && pipeline.status === 'running' && (
+        <p className="tracker-message tracker-collapsed-line">{currentLine}</p>
       )}
     </section>
   )

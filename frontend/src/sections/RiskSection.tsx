@@ -38,7 +38,12 @@ export function RiskSection({ risk, etfFlows, centralBanks, agentScores }: RiskS
       <div className="grid grid-3">
         <div className="card">
           <div className="card-header">
-            <div className="card-title">Risk Monitor</div>
+            <div className="card-title">
+              Risk Monitor
+              <Tooltip label={METRIC_HELP.sourceProxy}>
+                <span className="source-badge proxy">proxy</span>
+              </Tooltip>
+            </div>
             <Tooltip label={METRIC_HELP.gpr}>
               <span className="help-label">Signal glossary</span>
             </Tooltip>
@@ -65,10 +70,18 @@ export function RiskSection({ risk, etfFlows, centralBanks, agentScores }: RiskS
               <span className="value">{fmt(risk.conflict_intensity as number)}</span>
             </div>
           </div>
+          <p className="empty-hint" style={{ marginTop: '0.75rem' }}>
+            GPR is a VIX/oil market proxy — not live news NLP.
+          </p>
         </div>
 
         <div className="card">
-          <div className="card-title">ETF Flows (GLD / IAU)</div>
+          <div className="card-title">
+            ETF Flows (GLD / IAU)
+            <Tooltip label={METRIC_HELP.sourceEstimate}>
+              <span className="source-badge estimate">estimate</span>
+            </Tooltip>
+          </div>
           <div className="flow-stats">
             <FlowStat label="GLD daily" value={`${fmt(etfFlows.gld_daily_m as number, 1)}M`} help={METRIC_HELP.etfFlow} />
             <FlowStat label="GLD 30d avg" value={`${fmt(etfFlows.gld_30d_avg_m as number, 1)}M`} help="Average of the estimated daily GLD flow over the last 30 observations, in millions of dollars." />
@@ -85,6 +98,9 @@ export function RiskSection({ risk, etfFlows, centralBanks, agentScores }: RiskS
         <div className="card">
           <div className="card-title">
             <Tooltip label={METRIC_HELP.cbBuying}><span>Central Bank Buying</span></Tooltip>
+            <Tooltip label={METRIC_HELP.sourceSeed}>
+              <span className="source-badge seed">seed</span>
+            </Tooltip>
           </div>
           <div className="metric-value gold" style={{ fontSize: '1.75rem' }}>
             {fmt(centralBanks.recent_purchases_tonnes, 0)}t

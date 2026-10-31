@@ -286,7 +286,8 @@ def get_strategies(session: Session) -> dict:
     "primary": primary,
     "note": (
       "Playbooks reuse the same Keep/Add/Reduce budgets and long/OW sleeve rules as the paper books. "
-      "They are composed from today's warehouse — not a separate optimizer."
+      "The miner sleeve is taken from the live full-sample signal book; horizon ranking and "
+      "paper evidence use purged as-of scores. Composed from today's warehouse — not a separate optimizer."
     ),
     "drivers": {
       "stance": stance,

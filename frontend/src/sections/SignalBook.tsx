@@ -6,9 +6,15 @@ import { METRIC_HELP, exportCsv, fmtPct, horizonLabel, signalClass } from '../ut
 
 interface SignalBookProps {
   research: ResearchData
+  onOpenPipeline?: () => void
 }
 
-export function SignalBook({ research }: SignalBookProps) {
+function pathLabel(path?: string) {
+  if (path === 'asof_embargo') return 'as-of'
+  return 'live'
+}
+
+export function SignalBook({ research, onOpenPipeline }: SignalBookProps) {
   const horizons = research.model_summary.horizons.length
     ? research.model_summary.horizons
     : [5, 10, 20, 63, 126]
@@ -61,6 +67,7 @@ export function SignalBook({ research }: SignalBookProps) {
         expected_return: s.expected_return,
         horizon_days: s.horizon_days,
         model_version: s.model_version,
+        scoring_path: s.scoring_path ?? 'full_sample_live',
         date: s.date,
       })),
     )
@@ -72,8 +79,10 @@ export function SignalBook({ research }: SignalBookProps) {
         <div>
           <h2 className="workspace-title">Signal Book · {hLabel}</h2>
           <p className="workspace-sub">
-            Each row is that name’s latest forecast for the next {horizon} trading days ({hLabel}).
+            Each row is that name’s latest <span className="source-badge live">live</span> full-sample
+            forecast for the next {horizon} trading days ({hLabel}).
             {signals[0]?.date ? ` As of ${signals[0].date}.` : ''}
+            {' '}Paper books and history use purged as-of scores instead.
           </p>
         </div>
         <div className="workspace-actions">
@@ -120,6 +129,10 @@ export function SignalBook({ research }: SignalBookProps) {
             P(Gold) is the classifier’s probability. Expected return is the second model’s price change.
             Expected alpha subtracts a flat 1% from that price change. P(GDX)* multiplies P(Gold) by 0.95. The signal word is a cutoff on the probability and the alpha, not a third model.
           </li>
+          <li>
+            Scoring path is <span className="mono">full_sample_live</span> on this page.
+            Cite Model Validation and Paper Books for purged evidence — do not treat these live rows as a track record.
+          </li>
         </ol>
       </section>
 
@@ -152,6 +165,7 @@ export function SignalBook({ research }: SignalBookProps) {
         { term: 'Expected return', text: METRIC_HELP.expectedReturn },
         { term: 'Signal', text: METRIC_HELP.signal },
         { term: 'Model', text: METRIC_HELP.model },
+        { term: 'Path', text: METRIC_HELP.scoringPath },
       ]} />
 
       <div className="card table-card">
@@ -167,12 +181,22 @@ export function SignalBook({ research }: SignalBookProps) {
                 <th className="num"><Tooltip label={METRIC_HELP.probGdx}><span>P(GDX)*</span></Tooltip></th>
                 <th className="num"><Tooltip label={METRIC_HELP.alpha}><button type="button" className="th-btn" onClick={() => toggleSort('alpha')}>Expected alpha{sortInd('alpha')}</button></Tooltip></th>
                 <th className="num"><Tooltip label={METRIC_HELP.expectedReturn}><span>Expected return</span></Tooltip></th>
+                <th><Tooltip label={METRIC_HELP.scoringPath}><span>Path</span></Tooltip></th>
                 <th><Tooltip label={METRIC_HELP.model}><span>Model</span></Tooltip></th>
               </tr>
             </thead>
             <tbody key={horizon}>
               {filtered.length === 0 ? (
-                <tr><td colSpan={9} className="empty-row">No {horizon}-day forecasts yet. Run the pipeline.</td></tr>
+                <tr>
+                  <td colSpan={10} className="empty-row">
+                    No {horizon}-day forecasts yet.{' '}
+                    {onOpenPipeline ? (
+                      <button type="button" className="btn btn-sm" onClick={onOpenPipeline}>Run pipeline</button>
+                    ) : (
+                      'Run the pipeline.'
+                    )}
+                  </td>
+                </tr>
               ) : (
                 filtered.map((s) => (
                   <tr key={`${s.entity}-${s.horizon_days}-${s.date}`}>
@@ -186,6 +210,13 @@ export function SignalBook({ research }: SignalBookProps) {
                       {fmtPct(s.expected_alpha)}
                     </td>
                     <td className="num mono">{fmtPct(s.expected_return)}</td>
+                    <td>
+                      <Tooltip label={METRIC_HELP.scoringPath}>
+                        <span className={`source-badge ${s.scoring_path === 'asof_embargo' ? 'asof' : 'live'}`}>
+                          {pathLabel(s.scoring_path)}
+                        </span>
+                      </Tooltip>
+                    </td>
                     <td className="model-ver">{s.model_version}</td>
                   </tr>
                 ))
@@ -196,7 +227,7 @@ export function SignalBook({ research }: SignalBookProps) {
         <div className="table-footer">
           {filtered.length} names · next {horizon} trading days
           {signals[0]?.date ? ` · forecast date ${signals[0].date}` : ''}
-          {' · '}P(GDX)* is 95% of P(Gold), not its own model. Expected alpha subtracts a flat 1% hurdle.
+          {' · '}full-sample live · P(GDX)* is 95% of P(Gold). Expected alpha subtracts a flat 1% hurdle.
         </div>
       </div>
     </div>

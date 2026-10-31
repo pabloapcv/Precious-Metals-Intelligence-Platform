@@ -72,7 +72,9 @@ def get_macro_series(session: Session, symbols: list[str] | None = None, days: i
 
 
 def get_signal_book(session: Session, horizon: int = 10) -> list[dict]:
-  """One row per name: the latest forecast for this horizon, not the history."""
+  """One row per name: latest live (full-sample) forecast for this horizon."""
+  from pmip.models.asof import is_asof_version, scoring_path_for_version
+
   rows = (
     session.query(ModelPrediction)
     .filter(ModelPrediction.horizon_days == horizon)
@@ -81,6 +83,9 @@ def get_signal_book(session: Session, horizon: int = 10) -> list[dict]:
   )
   latest: dict[str, ModelPrediction] = {}
   for row in rows:
+    # Desk signal book never uses purged as-of history scores.
+    if is_asof_version(row.model_version):
+      continue
     if row.entity not in latest:
       latest[row.entity] = row
   rows = sorted(latest.values(), key=lambda row: _safe_float(row.expected_alpha, 0.0), reverse=True)
@@ -95,6 +100,7 @@ def get_signal_book(session: Session, horizon: int = 10) -> list[dict]:
       "expected_return": _safe_float(r.expected_return, 0.0),
       "expected_alpha": _safe_float(r.expected_alpha, 0.0),
       "model_version": r.model_version or "unknown",
+      "scoring_path": scoring_path_for_version(r.model_version),
       "date": r.date.isoformat(),
       "signal": _classify_signal(
         _safe_float(r.prob_outperform_gold, 0.5),
@@ -130,12 +136,9 @@ def get_model_catalog(session: Session) -> list[dict]:
         continue
       meta = joblib.load(meta_path)
       wf = meta.get("walk_forward") or {}
-      pred = (
-        session.query(ModelPrediction)
-        .filter(ModelPrediction.entity == entity, ModelPrediction.horizon_days == horizon)
-        .order_by(ModelPrediction.date.desc())
-        .first()
-      )
+      from pmip.models.asof import latest_live_prediction
+
+      pred = latest_live_prediction(session, entity=entity, horizon=horizon)
       catalog.append({
         "entity": entity,
         "label": target["label"],
@@ -152,6 +155,7 @@ def get_model_catalog(session: Session) -> list[dict]:
         },
         "latest_prediction_date": pred.date.isoformat() if pred else None,
         "latest_prob": _safe_float(pred.prob_outperform_gold, None) if pred else None,
+        "scoring_path": "full_sample_live",
       })
 
   catalog.sort(key=lambda x: (x["entity"], x["horizon_days"]))

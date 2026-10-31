@@ -86,12 +86,9 @@ def _indexed(prices: pd.DataFrame, symbols: list[str], days: int = 120) -> list[
 
 def get_allocation(session: Session) -> dict:
   macro = build_macro_snapshot(session)
-  gold_row = (
-    session.query(ModelPrediction)
-    .filter(ModelPrediction.entity == "GLD", ModelPrediction.horizon_days == HORIZON)
-    .order_by(ModelPrediction.date.desc())
-    .first()
-  )
+  from pmip.models.asof import latest_live_prediction
+
+  gold_row = latest_live_prediction(session, entity="GLD", horizon=HORIZON)
   key = (macro.get("as_of"), gold_row.date.isoformat() if gold_row else None)
   if _CACHE["key"] == key and _CACHE["payload"] is not None:
     return _CACHE["payload"]
@@ -167,6 +164,8 @@ def get_allocation(session: Session) -> dict:
     regime_name=regime.get("regime_name") if regime else None,
   )
 
+  from pmip.models.asof import scoring_path_for_version
+
   payload = {
     "as_of": macro.get("as_of"),
     "horizon_days": HORIZON,
@@ -175,6 +174,8 @@ def get_allocation(session: Session) -> dict:
     "reasons": reasons["points"],
     "gold_expected_return": gold_ret,
     "gold_method": gold_method,
+    "gold_model_version": gold_row.model_version if gold_row else None,
+    "scoring_path": scoring_path_for_version(gold_row.model_version) if gold_row else None,
     "real_yield": real_yield,
     "real_yield_source": macro.get("real_yield_source"),
     "yield_role": "headwind" if yield_headwind else ("support" if yield_support else "neutral"),

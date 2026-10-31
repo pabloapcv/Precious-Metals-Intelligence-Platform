@@ -225,11 +225,24 @@ def current_regime(db: Session = Depends(get_db)):
 
 @app.get("/api/v1/predictions")
 def predictions(horizon: int = 10, db: Session = Depends(get_db)):
+  from pmip.models.asof import is_asof_version, scoring_path_for_version
+
   rows = (
     db.query(ModelPrediction)
     .filter(ModelPrediction.horizon_days == horizon)
-    .order_by(ModelPrediction.prob_outperform_gold.desc())
+    .order_by(ModelPrediction.date.desc(), ModelPrediction.id.desc())
     .all()
+  )
+  latest: dict[str, ModelPrediction] = {}
+  for row in rows:
+    if is_asof_version(row.model_version):
+      continue
+    if row.entity not in latest:
+      latest[row.entity] = row
+  ranked = sorted(
+    latest.values(),
+    key=lambda r: float(r.prob_outperform_gold or 0.0),
+    reverse=True,
   )
   label_map = {t["entity"]: t for t in PREDICTION_TARGETS}
   return [
@@ -242,9 +255,11 @@ def predictions(horizon: int = 10, db: Session = Depends(get_db)):
       "expected_return": r.expected_return,
       "expected_alpha": r.expected_alpha,
       "horizon_days": r.horizon_days,
+      "model_version": r.model_version or "unknown",
+      "scoring_path": scoring_path_for_version(r.model_version),
       "date": r.date.isoformat(),
     }
-    for r in rows
+    for r in ranked
   ]
 
 
@@ -274,22 +289,14 @@ def _build_dashboard(db: Session) -> DashboardResponse:
   macro = build_macro_snapshot(db)
   regime = get_current_regime(db)
 
-  gold_pred = (
-    db.query(ModelPrediction)
-    .filter(ModelPrediction.entity == "GLD", ModelPrediction.horizon_days == 10)
-    .order_by(ModelPrediction.date.desc())
-    .first()
-  )
+  from pmip.models.asof import latest_live_prediction, latest_live_predictions
+
+  gold_pred = latest_live_prediction(db, entity="GLD", horizon=10)
   gold_bullish = _safe_float(gold_pred.prob_outperform_gold if gold_pred else None, 0.55)
   gold_expected_alpha = _safe_float(gold_pred.expected_alpha if gold_pred else None, 0.0)
 
   miner_entities = [m["ticker"] for m in ALL_MINERS] + ["GDX", "GDXJ", "RING"]
-  miner_preds = (
-    db.query(ModelPrediction)
-    .filter(ModelPrediction.entity.in_(miner_entities), ModelPrediction.horizon_days == 10)
-    .order_by(ModelPrediction.expected_alpha.desc())
-    .all()
-  )
+  miner_preds = latest_live_predictions(db, entities=miner_entities, horizon=10)
   label_map = {t["entity"]: t for t in PREDICTION_TARGETS}
   mining_companies = [
     PredictionItem(
@@ -382,7 +389,9 @@ def _build_dashboard(db: Session) -> DashboardResponse:
   if regime:
     insights.append(f"Current regime: {regime['regime_name']} — miners may have asymmetric leverage here.")
   if cb_total > 30:
-    insights.append(f"Central banks bought ~{cb_total:.0f}t in recent months — structural demand support.")
+    insights.append(
+      f"Seed central-bank series shows ~{cb_total:.0f}t in recent months — illustrative demand support, not a live WGC feed."
+    )
   if mining_companies:
     top = mining_companies[0]
     insights.append(

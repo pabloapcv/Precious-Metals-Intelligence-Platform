@@ -358,12 +358,9 @@ def get_explainability(session: Session) -> dict:
     for out in agent_outputs.values()
   ]
 
-  gold_pred = (
-    session.query(ModelPrediction)
-    .filter(ModelPrediction.entity == "GLD", ModelPrediction.horizon_days == 10)
-    .order_by(ModelPrediction.date.desc())
-    .first()
-  )
+  from pmip.models.asof import latest_live_prediction
+
+  gold_pred = latest_live_prediction(session, entity="GLD", horizon=10)
 
   return {
     "as_of": macro["as_of"],

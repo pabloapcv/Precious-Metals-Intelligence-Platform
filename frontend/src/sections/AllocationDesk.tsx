@@ -96,7 +96,16 @@ export function AllocationDesk({ allocation }: { allocation: AllocationData }) {
           <span className="kpi-value">{pct(allocation.gold_expected_return)}</span>
         </div>
         <div className="kpi-card">
-          <Tooltip label={METRIC_HELP.real_yields}><span className="kpi-label">Real yield</span></Tooltip>
+          <Tooltip label={METRIC_HELP.real_yields}>
+            <span className="kpi-label">
+              Real yield
+              {allocation.real_yield_source === 'estimated' ? (
+                <span className="source-badge estimate">estimated</span>
+              ) : allocation.real_yield_source ? (
+                <span className="source-badge live">{allocation.real_yield_source}</span>
+              ) : null}
+            </span>
+          </Tooltip>
           <span className="kpi-value">{allocation.real_yield == null ? '—' : `${allocation.real_yield.toFixed(2)}%`}</span>
           <span className={`role-tag role-${allocation.yield_role}`}>{allocation.yield_role}</span>
         </div>

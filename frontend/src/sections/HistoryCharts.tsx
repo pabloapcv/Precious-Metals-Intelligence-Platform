@@ -33,9 +33,10 @@ interface HistoryChartsProps {
   history: HistoryData
   onReload: (days: number, horizon: number) => void
   loading?: boolean
+  onOpenPipeline?: () => void
 }
 
-export function HistoryCharts({ history, onReload, loading }: HistoryChartsProps) {
+export function HistoryCharts({ history, onReload, loading, onOpenPipeline }: HistoryChartsProps) {
   const [days, setDays] = useState(history.lookback_days)
   const [horizon, setHorizon] = useState(history.horizon_days)
   const [selectedEntities, setSelectedEntities] = useState<string[]>(['GLD', 'GDX', 'GDXJ'])
@@ -225,8 +226,13 @@ export function HistoryCharts({ history, onReload, loading }: HistoryChartsProps
           </ResponsiveContainer>
         ) : (
           <div className="empty-state">
-            <p>No historical gold outlook yet.</p>
-            <p className="empty-hint">Run the pipeline to backfill prediction history.</p>
+            <p>No purged as-of gold outlook yet.</p>
+            <p className="empty-hint">Run the history stage to backfill as-of scores (full-sample rows are not plotted).</p>
+            {onOpenPipeline ? (
+              <button type="button" className="btn btn-sm" onClick={onOpenPipeline} style={{ marginTop: '0.75rem' }}>
+                Run pipeline
+              </button>
+            ) : null}
           </div>
         )}
       </div>
