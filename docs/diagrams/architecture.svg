@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 520" role="img" aria-label="PMIP system architecture">
+  <defs>
+    <linearGradient id="bg4" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0e17"/>
+      <stop offset="100%" stop-color="#121826"/>
+    </linearGradient>
+  </defs>
+  <rect width="920" height="520" rx="16" fill="url(#bg4)"/>
+  <text x="36" y="40" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">System architecture</text>
+  <text x="36" y="62" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="12">React terminal -&gt; FastAPI -&gt; dual scoring paths -&gt; warehouse -&gt; ETL</text>
+  <rect x="200" y="90" width="520" height="56" rx="12" fill="#1a2234" stroke="#d4a843" stroke-width="2"/>
+  <text x="460" y="124" text-anchor="middle" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700">React research terminal | 12 workspaces</text>
+  <line x1="460" y1="146" x2="460" y2="172" stroke="#94a3b8" stroke-width="2"/>
+  <rect x="260" y="172" width="400" height="48" rx="10" fill="#222d42" stroke="#3d4f6a"/>
+  <text x="460" y="202" text-anchor="middle" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600">FastAPI | dashboard | allocation | research | paper | pipeline</text>
+  <line x1="460" y1="220" x2="460" y2="246" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="240" y1="246" x2="680" y2="246" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="240" y1="246" x2="240" y2="268" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="680" y1="246" x2="680" y2="268" stroke="#94a3b8" stroke-width="2"/>
+  <rect x="70" y="268" width="340" height="110" rx="12" fill="#2a2418" stroke="#d4a843" stroke-width="2"/>
+  <text x="240" y="298" text-anchor="middle" fill="#d4a843" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700">LIVE DESK PATH</text>
+  <text x="240" y="322" text-anchor="middle" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="12">LightGBM / HistGradientBoosting</text>
+  <text x="240" y="342" text-anchor="middle" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="11">full-sample registry | SIG / STR / ALC / PTF</text>
+  <text x="240" y="362" text-anchor="middle" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="11">+ 4-state Gaussian HMM regime</text>
+  <rect x="510" y="268" width="340" height="110" rx="12" fill="#142033" stroke="#60a5fa" stroke-width="2"/>
+  <text x="680" y="298" text-anchor="middle" fill="#60a5fa" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="700">EVIDENCE PATH</text>
+  <text x="680" y="322" text-anchor="middle" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="12">As-of HGB refits | embargo = horizon</text>
+  <text x="680" y="342" text-anchor="middle" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="11">HST / PAP | purged WF (make research)</text>
+  <text x="680" y="362" text-anchor="middle" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="11">baselines | 10 bps flip cost</text>
+  <line x1="240" y1="378" x2="240" y2="404" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="680" y1="378" x2="680" y2="404" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="240" y1="404" x2="680" y2="404" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="460" y1="404" x2="460" y2="424" stroke="#94a3b8" stroke-width="2"/>
+  <rect x="220" y="424" width="480" height="40" rx="10" fill="#1a2234" stroke="#34d399"/>
+  <text x="460" y="450" text-anchor="middle" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600">SQLite warehouse (default) | optional Postgres + MLflow</text>
+  <line x1="460" y1="464" x2="460" y2="482" stroke="#94a3b8" stroke-width="2"/>
+  <rect x="160" y="482" width="600" height="28" rx="8" fill="#111827" stroke="#2a3548"/>
+  <text x="460" y="501" text-anchor="middle" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="11">ETL: Yahoo Finance | FRED (optional) | ETF-flow proxy | CB / miner seeds | GPR proxy</text>
+</svg>

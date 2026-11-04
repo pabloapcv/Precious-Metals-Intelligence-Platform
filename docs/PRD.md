@@ -7,7 +7,7 @@
 | Product type | Metals allocation research desk (decision support) |
 | Document status | Current product — v1 research desk |
 | Primary framing | Not a trading system; does not place orders |
-| Related docs | [README](../README.md), [Research note](research-note.md), [Executive guide](executive-platform-guide.md), [Numbers at a glance](numbers-at-a-glance.md) |
+| Related docs | [README](../README.md), [User & client guide](guide-for-users.md), [DS peer guide](guide-for-data-science-peers.md), [Research note](research-note.md), [Executive guide](executive-platform-guide.md), [Numbers at a glance](numbers-at-a-glance.md) |
 
 ---
 

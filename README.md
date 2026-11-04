@@ -1,5 +1,10 @@
 # Precious Metals Macro Intelligence Platform (PMIP)
 
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](https://github.com/pabloapcv/Precious-Metals-Intelligence-Platform)
+[![React](https://img.shields.io/badge/UI-React-61DAFB?logo=react&logoColor=black)](frontend/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-d4a843)](LICENSE)
+
 **A metals allocation research desk** — not a trading platform and not “AI for gold.”
 
 It answers two questions a gold book actually faces:
@@ -7,7 +12,16 @@ It answers two questions a gold book actually faces:
 1. **Gold budget.** Over the next few weeks, should exposure to gold be larger or smaller versus equities (and the rest of a multi-asset book)?
 2. **Gold sleeve.** Given that budget, how should it be split between bullion and miners / royalties?
 
-The screen is a decision desk. The evidence behind it is a purged walk-forward study with embargo, baselines, and turnover costs. Several on-screen figures are explicit rules rather than measured probabilities; the [claim inventory](docs/research-note.md) says which is which. Full product requirements: [docs/PRD.md](docs/PRD.md).
+![Two decisions: gold budget then gold sleeve](docs/diagrams/two-decisions.svg)
+
+The screen is a decision desk. The evidence behind it is a purged walk-forward study with embargo, baselines, and turnover costs. Several on-screen figures are explicit rules rather than measured probabilities; the [claim inventory](docs/research-note.md) says which is which.
+
+| Start here | Who it is for |
+| --- | --- |
+| [User & client guide](docs/guide-for-users.md) · [PDF](docs/guide-for-users.pdf) | How to use every workspace |
+| [Data science peer guide](docs/guide-for-data-science-peers.md) · [PDF](docs/guide-for-data-science-peers.pdf) | Models, features, live vs as-of, evaluation |
+| [Product requirements](docs/PRD.md) | Scope, rules, and what v1 does not claim |
+| [Docs index](docs/README.md) | Every document in one list |
 
 ---
 
@@ -47,23 +61,7 @@ The screen is a decision desk. The evidence behind it is a purged walk-forward s
 
 ## Architecture
 
-```
-React terminal (workspaces)
-        │
-     FastAPI
-        │
- ┌──────┼──────────────────────────────┐
- │      │                              │
- Signals / Strategy / Allocation    Research note
- Paper / History / Portfolio        (purged WF)
-        │                              │
- Models (LightGBM or sklearn HGB)  ←──┘
- Regime HMM · Feature store
-        │
- SQLite warehouse (default)  or  Postgres
-        │
- ETL: Yahoo Finance · FRED (optional) · derived flows · seeds
-```
+![System architecture](docs/diagrams/architecture.svg)
 
 Default store is local SQLite (`data/pmip.db`). Postgres + MLflow are optional via Docker.
 
@@ -220,7 +218,7 @@ Also see [docs/executive-platform-guide.md](docs/executive-platform-guide.md) an
 | `src/pmip/api/` | FastAPI services |
 | `src/pmip/pipeline/` | Runner, progress, run options |
 | `frontend/` | React terminal |
-| `docs/` | Research note and guides |
+| `docs/` | Guides, PRD, diagrams, purged research |
 | `scripts/` | CLI entrypoints |
 
 ---
@@ -247,4 +245,4 @@ Also see [docs/executive-platform-guide.md](docs/executive-platform-guide.md) an
 
 ## License
 
-MIT
+[MIT](LICENSE)

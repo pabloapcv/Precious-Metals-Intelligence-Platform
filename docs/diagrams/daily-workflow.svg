@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" role="img" aria-label="Suggested daily workflow">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0e17"/>
+      <stop offset="100%" stop-color="#151c2b"/>
+    </linearGradient>
+    <marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#d4a843"/>
+    </marker>
+  </defs>
+  <rect width="920" height="420" rx="16" fill="url(#bg2)"/>
+  <text x="36" y="40" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Suggested daily workflow</text>
+  <text x="36" y="62" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="12">Briefing path | evidence path when someone asks to prove it</text>
+  <g font-family="Helvetica, Arial, sans-serif">
+    <circle cx="90" cy="140" r="22" fill="#d4a843"/><text x="90" y="146" text-anchor="middle" fill="#0a0e17" font-size="14" font-weight="700">1</text>
+    <rect x="36" y="178" width="108" height="70" rx="10" fill="#1a2234" stroke="#3d4f6a"/>
+    <text x="90" y="208" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Sync /</text>
+    <text x="90" y="226" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Refresh prices</text>
+    <line x1="144" y1="140" x2="196" y2="140" stroke="#d4a843" stroke-width="2" marker-end="url(#arr2)"/>
+    <circle cx="250" cy="140" r="22" fill="#d4a843"/><text x="250" y="146" text-anchor="middle" fill="#0a0e17" font-size="14" font-weight="700">2</text>
+    <rect x="196" y="178" width="108" height="70" rx="10" fill="#1a2234" stroke="#3d4f6a"/>
+    <text x="250" y="208" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Command</text>
+    <text x="250" y="226" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Center</text>
+    <line x1="304" y1="140" x2="356" y2="140" stroke="#d4a843" stroke-width="2" marker-end="url(#arr2)"/>
+    <circle cx="410" cy="140" r="22" fill="#d4a843"/><text x="410" y="146" text-anchor="middle" fill="#0a0e17" font-size="14" font-weight="700">3</text>
+    <rect x="356" y="178" width="108" height="70" rx="10" fill="#1a2234" stroke="#3d4f6a"/>
+    <text x="410" y="208" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Gold vs</text>
+    <text x="410" y="226" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Markets</text>
+    <line x1="464" y1="140" x2="516" y2="140" stroke="#d4a843" stroke-width="2" marker-end="url(#arr2)"/>
+    <circle cx="570" cy="140" r="22" fill="#d4a843"/><text x="570" y="146" text-anchor="middle" fill="#0a0e17" font-size="14" font-weight="700">4</text>
+    <rect x="516" y="178" width="108" height="70" rx="10" fill="#1a2234" stroke="#3d4f6a"/>
+    <text x="570" y="208" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Signal</text>
+    <text x="570" y="226" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Book</text>
+    <line x1="624" y1="140" x2="676" y2="140" stroke="#d4a843" stroke-width="2" marker-end="url(#arr2)"/>
+    <circle cx="730" cy="140" r="22" fill="#d4a843"/><text x="730" y="146" text-anchor="middle" fill="#0a0e17" font-size="14" font-weight="700">5</text>
+    <rect x="676" y="178" width="108" height="70" rx="10" fill="#1a2234" stroke="#3d4f6a"/>
+    <text x="730" y="208" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Strategy</text>
+    <text x="730" y="226" text-anchor="middle" fill="#f0f4f8" font-size="12" font-weight="600">Desk</text>
+    <line x1="784" y1="140" x2="836" y2="140" stroke="#d4a843" stroke-width="2" marker-end="url(#arr2)"/>
+    <circle cx="860" cy="140" r="22" fill="#60a5fa"/><text x="860" y="146" text-anchor="middle" fill="#0a0e17" font-size="14" font-weight="700">6</text>
+    <rect x="806" y="178" width="88" height="70" rx="10" fill="#142033" stroke="#60a5fa"/>
+    <text x="850" y="208" text-anchor="middle" fill="#f0f4f8" font-size="11" font-weight="600">Evidence</text>
+    <text x="850" y="226" text-anchor="middle" fill="#94a3b8" font-size="10">MDL / PAP</text>
+  </g>
+  <rect x="36" y="290" width="848" height="96" rx="12" fill="#111827" stroke="#2a3548"/>
+  <text x="56" y="324" fill="#d4a843" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="700">Steps 1-5 = morning briefing</text>
+  <text x="56" y="348" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="12">Decide budget size, then sleeve names, then read the primary playbook recipe.</text>
+  <text x="56" y="372" fill="#60a5fa" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="700">Step 6 = when someone asks for evidence</text>
+  <text x="360" y="372" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="12">Model Validation (purged table) + Paper Books (as-of shadow PnL).</text>
+</svg>

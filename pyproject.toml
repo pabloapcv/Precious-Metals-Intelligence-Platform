@@ -7,6 +7,7 @@ name = "precious-metals-platform"
 version = "0.1.0"
 description = "Precious Metals Macro Intelligence Platform — institutional-grade gold & mining analytics"
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

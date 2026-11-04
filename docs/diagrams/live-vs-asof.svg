@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 380" role="img" aria-label="Live desk path versus as-of evidence path">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0e17"/>
+      <stop offset="100%" stop-color="#1a2234"/>
+    </linearGradient>
+  </defs>
+  <rect width="920" height="380" rx="16" fill="url(#bg3)"/>
+  <text x="36" y="40" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Live desk vs as-of evidence</text>
+  <text x="36" y="62" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="12">Same feature store | different scoring contracts | both labeled in the UI</text>
+  <rect x="330" y="90" width="260" height="52" rx="10" fill="#222d42" stroke="#94a3b8"/>
+  <text x="460" y="122" text-anchor="middle" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="600">Feature store (daily matrix)</text>
+  <path d="M460 142 L460 170 L200 170 L200 190" fill="none" stroke="#d4a843" stroke-width="2"/>
+  <path d="M460 142 L460 170 L720 170 L720 190" fill="none" stroke="#60a5fa" stroke-width="2"/>
+  <rect x="70" y="190" width="260" height="150" rx="14" fill="#2a2418" stroke="#d4a843" stroke-width="2"/>
+  <rect x="90" y="206" width="72" height="24" rx="6" fill="#d4a843"/>
+  <text x="126" y="223" text-anchor="middle" fill="#0a0e17" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700">LIVE</text>
+  <text x="200" y="250" text-anchor="middle" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="700">Full-sample models</text>
+  <text x="200" y="274" text-anchor="middle" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="11">Fit on all available history</text>
+  <text x="200" y="298" text-anchor="middle" fill="#cbd5e1" font-family="Helvetica, Arial, sans-serif" font-size="11">Signal Book | Strategy sleeve</text>
+  <text x="200" y="318" text-anchor="middle" fill="#cbd5e1" font-family="Helvetica, Arial, sans-serif" font-size="11">Gold vs Markets | HRP tilt</text>
+  <rect x="590" y="190" width="260" height="150" rx="14" fill="#142033" stroke="#60a5fa" stroke-width="2"/>
+  <rect x="610" y="206" width="72" height="24" rx="6" fill="#60a5fa"/>
+  <text x="646" y="223" text-anchor="middle" fill="#0a0e17" font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="700">AS-OF</text>
+  <text x="720" y="250" text-anchor="middle" fill="#f0f4f8" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="700">Horizon embargo refits</text>
+  <text x="720" y="274" text-anchor="middle" fill="#94a3b8" font-family="Helvetica, Arial, sans-serif" font-size="11">No labels that reach into T</text>
+  <text x="720" y="298" text-anchor="middle" fill="#cbd5e1" font-family="Helvetica, Arial, sans-serif" font-size="11">Historical Outlook | Paper Books</text>
+  <text x="720" y="318" text-anchor="middle" fill="#cbd5e1" font-family="Helvetica, Arial, sans-serif" font-size="11">Cite with purged research table</text>
+</svg>
