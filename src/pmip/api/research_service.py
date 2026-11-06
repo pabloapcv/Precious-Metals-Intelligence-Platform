@@ -280,9 +280,24 @@ def load_purged_evidence() -> dict | None:
         "name": name,
         "final_wealth": row.get("final_wealth"),
         "total_return": row.get("total_return"),
+        "total_return_ci": row.get("total_return_ci"),
         "max_drawdown": row.get("max_drawdown"),
         "hit_rate": row.get("hit_rate"),
+        "hit_rate_ci": row.get("hit_rate_ci"),
       })
+
+    stat_tests = study.get("statistical_tests", {})
+    dm_comparisons = []
+    for comp in stat_tests.get("comparisons", []):
+      dm_comparisons.append({
+        "baseline": comp.get("baseline"),
+        "p_value": comp.get("dm_test", {}).get("p_value"),
+        "p_adjusted": comp.get("p_adjusted"),
+        "significant": comp.get("significant_after_holm"),
+        "mean_loss_diff": comp.get("dm_test", {}).get("mean_loss_diff"),
+        "interpretation": comp.get("interpretation"),
+      })
+
     studies.append({
       "name": study.get("name"),
       "question": study.get("question"),
@@ -295,19 +310,30 @@ def load_purged_evidence() -> dict | None:
       "auc": hgb.get("auc"),
       "accuracy": hgb.get("accuracy"),
       "books": books,
+      "dm_comparisons": dm_comparisons,
+      "dm_summary": stat_tests.get("summary"),
     })
   if not studies:
     return None
+
+  inference = payload.get("inference_summary", {})
   return {
     "generated_at": payload.get("generated_at"),
     "horizon_days": payload.get("horizon_days", 10),
     "cost_bps": payload.get("cost_bps", 10),
     "studies": studies,
     "claims": payload.get("claims") or [],
+    "inference_summary": {
+      "n_comparisons": inference.get("total_comparisons", 0),
+      "bootstrap_replications": inference.get("bootstrap_replications", 2000),
+      "confidence_level": inference.get("confidence_level", 0.95),
+      "seed": inference.get("random_seed", 42),
+    } if inference else None,
     "note": (
       "Cite this purged table for whether the gold-budget / miner-sleeve rules "
-      "helped after costs. The model catalog below is the operational screen; "
-      "history charts and paper books now use as-of scores with the same embargo grammar."
+      "helped after costs. Confidence intervals and p-values account for serial "
+      "dependence via stationary bootstrap and HAC variance. "
+      "History charts and paper books use as-of scores with the same embargo grammar."
     ),
   }
 

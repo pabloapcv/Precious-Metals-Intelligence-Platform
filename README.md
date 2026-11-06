@@ -185,6 +185,18 @@ Method in short:
 - Wealth compounds those non-overlapping returns minus **10 bps** when the book flips.
 - Baselines: always entity, always benchmark, 20-day relative momentum, small logistic.
 
+### Statistical uncertainty
+
+Every cited result includes measures of statistical uncertainty:
+
+- **Bootstrap confidence intervals** (95%) for hit rates and total returns, using stationary bootstrap (Politis-Romano) with block length matched to the horizon to preserve serial dependence in non-overlapping periods.
+- **Diebold-Mariano tests** comparing the primary model's economic performance against each baseline, with HAC variance (Newey-West) and Harvey-Leybourne-Newbold small-sample correction.
+- **Holm-Bonferroni correction** for multiple comparisons across all pairwise tests, controlling the family-wise error rate at 5%.
+- **Plain-language interpretation** in the markdown output (e.g., "interval includes zero, so no significant edge").
+- **Seeded randomness** (default seed 42) for reproducibility.
+
+The inference module is in `src/pmip/research/inference.py` with unit tests in `tests/test_statistical_inference.py`.
+
 Also see [docs/executive-platform-guide.md](docs/executive-platform-guide.md) and [docs/numbers-at-a-glance.md](docs/numbers-at-a-glance.md).
 
 ---

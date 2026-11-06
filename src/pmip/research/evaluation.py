@@ -5,6 +5,9 @@
 
 Labels that would overlap a test window are embargoed. Economic results use
 non-overlapping holding periods and a flat turnover cost.
+
+Statistical inference uses dependence-aware bootstrap for confidence intervals
+and Diebold-Mariano tests with HAC variance for forecast comparisons.
 """
 
 from __future__ import annotations
@@ -22,6 +25,17 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from pmip.models.training import WalkForwardConfig, walk_forward_split
+from pmip.research.inference import (
+  DEFAULT_N_BOOTSTRAP,
+  DEFAULT_SEED,
+  bootstrap_hit_rate,
+  bootstrap_return,
+  compare_model_to_baselines,
+  diebold_mariano_test,
+  holm_bonferroni,
+  interpret_dm_test,
+  interpret_interval,
+)
 
 HORIZON = 10
 COST_BPS = 10
@@ -213,9 +227,16 @@ def run_purged_study(
       "n": int(len(y)),
     }
 
-  books = _books(oos, cost_bps)
+  books = _books(oos, cost_bps, horizon=horizon)
   calibration = _calibration(oos["y"].to_numpy(), oos["hgb"].to_numpy())
   stability = _stability(frame, columns, splits)
+
+  statistical_tests = _compute_statistical_tests(
+    books["return_series"],
+    primary_model="gradient_boosting",
+    baselines=["logistic_macro", "momentum", "always_entity", "always_benchmark"],
+    horizon=horizon,
+  )
 
   return {
     "name": name,
@@ -234,6 +255,7 @@ def run_purged_study(
     "stability": stability,
     "backtest": books["summary"],
     "curve": books["curve"],
+    "statistical_tests": statistical_tests,
     "claim": (
       f"Each score is the chance that {entity_label} beats {benchmark_label} "
       f"over the next {horizon} trading days. The test day is excluded from training "
@@ -242,7 +264,12 @@ def run_purged_study(
   }
 
 
-def _books(oos: pd.DataFrame, cost_bps: float) -> dict:
+def _books(oos: pd.DataFrame, cost_bps: float, horizon: int = HORIZON, seed: int = DEFAULT_SEED) -> dict:
+  """Compute wealth curves and return series for each strategy.
+
+  Returns both summary statistics and the raw return series needed for
+  statistical inference (bootstrap CIs and DM tests).
+  """
   cost = cost_bps / 10_000
   strategies = {
     "gradient_boosting": (oos["hgb"] > 0.5).astype(int),
@@ -255,6 +282,7 @@ def _books(oos: pd.DataFrame, cost_bps: float) -> dict:
   curve = []
   wealth = {name: 1.0 for name in strategies}
   prev = {name: None for name in strategies}
+  return_series = {}
 
   for i, row in oos.iterrows():
     point = {"date": row["date"]}
@@ -277,24 +305,108 @@ def _books(oos: pd.DataFrame, cost_bps: float) -> dict:
       turnover_cost = cost if last is not None and pos != last else 0.0
       rets.append(gross - turnover_cost)
       last = pos
+    return_series[name] = np.array(rets)
     series = pd.Series(rets)
     equity = (1 + series).cumprod()
     peak = equity.cummax()
     drawdown = float((equity / peak - 1).min()) if len(equity) else None
     hit = None
+    predictions = None
     if name not in ("always_entity", "always_benchmark"):
       chosen = positions.to_numpy()
       labels = oos["y"].to_numpy()
       hit = float((((chosen == 1) & (labels == 1)) | ((chosen == 0) & (labels == 0))).mean())
+      predictions = chosen
+
+    block_len = max(1, min(horizon, len(rets) // 8))
+    total_ret_ci = bootstrap_return(
+      np.array(rets),
+      block_length=block_len,
+      seed=seed,
+      statistic="total",
+    )
+    hit_ci = None
+    if predictions is not None:
+      hit_ci = bootstrap_hit_rate(
+        predictions,
+        labels,
+        block_length=block_len,
+        seed=seed,
+      )
+
     summary[name] = {
       "final_wealth": round(float(equity.iloc[-1]), 4) if len(equity) else None,
       "total_return": round(float(equity.iloc[-1] - 1), 4) if len(equity) else None,
+      "total_return_ci": total_ret_ci.to_dict(),
       "max_drawdown": round(drawdown, 4) if drawdown is not None else None,
       "hit_rate": None if hit is None else round(hit, 4),
+      "hit_rate_ci": hit_ci.to_dict() if hit_ci else None,
       "avg_period_return": round(float(series.mean()), 4) if len(series) else None,
       "n_periods": int(len(series)),
     }
-  return {"summary": summary, "curve": curve}
+
+  return {"summary": summary, "curve": curve, "return_series": return_series}
+
+
+def _compute_statistical_tests(
+  return_series: dict[str, np.ndarray],
+  primary_model: str,
+  baselines: list[str],
+  horizon: int,
+) -> dict:
+  """Compute Diebold-Mariano tests and Holm-adjusted p-values.
+
+  Tests whether the primary model's returns differ significantly from each
+  baseline's returns. Uses HAC variance with bandwidth h-1 for the DM test.
+  """
+  if primary_model not in return_series:
+    return {"error": "primary model returns not found"}
+
+  model_rets = return_series[primary_model]
+  dm_results = []
+  p_values = []
+
+  for baseline in baselines:
+    if baseline not in return_series:
+      continue
+    baseline_rets = return_series[baseline]
+    dm = diebold_mariano_test(
+      losses_model=-model_rets,
+      losses_baseline=-baseline_rets,
+      h=horizon,
+      alternative="two-sided",
+    )
+    dm_results.append({
+      "baseline": baseline,
+      "dm_test": dm.to_dict(),
+      "interpretation": interpret_dm_test(dm, primary_model, baseline),
+    })
+    p_values.append(dm.p_value if np.isfinite(dm.p_value) else 1.0)
+
+  holm_adjusted = holm_bonferroni(p_values, alpha=0.05)
+  for i, adj in enumerate(holm_adjusted):
+    if i < len(dm_results):
+      dm_results[i]["p_adjusted"] = adj["p_adjusted"]
+      dm_results[i]["significant_after_holm"] = adj["significant"]
+
+  any_significant = any(r.get("significant_after_holm", False) for r in dm_results)
+  summary = (
+    "After Holm-Bonferroni correction for multiple comparisons, "
+    + ("at least one comparison is significant at 5%." if any_significant else "no comparison is significant at 5%.")
+  )
+
+  return {
+    "primary_model": primary_model,
+    "n_comparisons": len(dm_results),
+    "comparisons": dm_results,
+    "multiple_testing_method": "holm_bonferroni",
+    "summary": summary,
+    "note": (
+      "Diebold-Mariano tests use HAC variance (Newey-West) to account for serial "
+      "correlation in forecast errors. Positive mean_loss_diff means the model "
+      "underperformed the baseline. p_adjusted accounts for multiple testing."
+    ),
+  }
 
 
 def _calibration(y: np.ndarray, proba: np.ndarray, bins: int = 5) -> list[dict]:
@@ -394,7 +506,15 @@ def claim_inventory() -> list[dict]:
   ]
 
 
-def run_research(features: pd.DataFrame, prices: pd.DataFrame) -> dict:
+def run_research(features: pd.DataFrame, prices: pd.DataFrame, seed: int = DEFAULT_SEED) -> dict:
+  """Run purged walk-forward studies with full statistical inference.
+
+  Each study includes:
+  - Bootstrap confidence intervals for hit rates and returns
+  - Diebold-Mariano tests comparing the primary model to baselines
+  - Holm-Bonferroni correction for multiple comparisons
+  - Plain-language interpretation of results
+  """
   studies = [
     run_purged_study(
       build_frame(prices, features, "GC=F", "SPX"),
@@ -411,10 +531,33 @@ def run_research(features: pd.DataFrame, prices: pd.DataFrame) -> dict:
       benchmark_label="Gold futures",
     ),
   ]
+
+  n_studies = len([s for s in studies if not s.get("error")])
+  total_comparisons = sum(
+    s.get("statistical_tests", {}).get("n_comparisons", 0)
+    for s in studies
+    if not s.get("error")
+  )
+
+  inference_summary = {
+    "n_studies": n_studies,
+    "total_comparisons": total_comparisons,
+    "bootstrap_replications": DEFAULT_N_BOOTSTRAP,
+    "confidence_level": 0.95,
+    "random_seed": seed,
+    "note": (
+      f"Confidence intervals use stationary bootstrap ({DEFAULT_N_BOOTSTRAP} replications) "
+      f"with block length matched to the horizon to preserve serial dependence. "
+      f"Diebold-Mariano tests use Newey-West HAC variance. "
+      f"Holm-Bonferroni correction is applied to the {total_comparisons} comparisons across all studies."
+    ),
+  }
+
   return {
     "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     "horizon_days": HORIZON,
     "cost_bps": COST_BPS,
     "studies": studies,
     "claims": claim_inventory(),
+    "inference_summary": inference_summary,
   }
