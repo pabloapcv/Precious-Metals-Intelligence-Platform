@@ -26,11 +26,22 @@ class Base(DeclarativeBase):
 
 
 class MacroDaily(Base):
-    """Daily macro and commodity price series."""
+    """Daily macro and commodity price series with point-in-time provenance.
+
+    Point-in-time fields:
+      release_date: When this observation was first published (available to trade on).
+      vintage: Revision identifier (ALFRED vintage date or 'initial').
+      lag_assumed: True when release_date is estimated from a lag rule, not ALFRED.
+      ingested_at: When this row was ingested into the warehouse.
+
+    For as-of feature construction, join on `release_date <= prediction_date` to
+    avoid look-ahead bias. Revisions have the same (date, symbol) but different
+    vintage; use the latest vintage with release_date <= prediction_date.
+    """
 
     __tablename__ = "macro_daily"
     __table_args__ = (
-        UniqueConstraint("date", "symbol", name="uq_macro_daily_date_symbol"),
+        UniqueConstraint("date", "symbol", "vintage", name="uq_macro_daily_date_symbol_vintage"),
         Index("ix_macro_daily_symbol_date", "symbol", "date"),
     )
 
@@ -43,6 +54,10 @@ class MacroDaily(Base):
     close: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     volume: Mapped[Decimal | None] = mapped_column(Numeric(20, 2))
     source: Mapped[str] = mapped_column(String(32), default="yfinance")
+    release_date: Mapped[date] = mapped_column(Date, nullable=True, index=True)
+    vintage: Mapped[str] = mapped_column(String(32), default="initial")
+    lag_assumed: Mapped[bool] = mapped_column(Boolean, default=False)
+    ingested_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

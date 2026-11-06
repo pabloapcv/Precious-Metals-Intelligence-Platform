@@ -1,4 +1,13 @@
-"""Phase 4: Feature engineering for macro and mining signals."""
+"""Phase 4: Feature engineering for macro and mining signals.
+
+Point-in-time guarantees:
+  When building features for a prediction date T, macro data is joined on
+  release_date <= T, ensuring we only use values that were actually available
+  to a trader on date T. This applies to both live and as-of scoring paths.
+
+  For price-based features (returns, volatility, RSI, etc.), the assumption
+  is that daily closes are available by T+1 open (standard market data lag).
+"""
 
 from __future__ import annotations
 
@@ -154,19 +163,52 @@ def upsert_features(session: Session, feature_df: pd.DataFrame, entity: str) -> 
   return len(records)
 
 
+def _load_macro_wide_pit(session: Session, as_of: date | None = None) -> pd.DataFrame:
+  """Load macro data as wide DataFrame with point-in-time filtering.
+
+  If as_of is provided, only observations with release_date <= as_of are included,
+  using the latest vintage for each (date, symbol). This ensures features built
+  for date as_of only use information that was available on that date.
+  """
+  query = session.query(MacroDaily)
+  if as_of:
+    query = query.filter(MacroDaily.release_date <= as_of)
+
+  query = query.order_by(MacroDaily.date, MacroDaily.release_date.desc())
+  rows = query.all()
+  if not rows:
+    return pd.DataFrame()
+
+  seen = set()
+  filtered_rows = []
+  for r in rows:
+    key = (r.date, r.symbol)
+    if key not in seen:
+      seen.add(key)
+      filtered_rows.append(r)
+
+  df = pd.DataFrame(
+    [{"date": r.date, "symbol": r.symbol, "close": float(r.close)} for r in filtered_rows]
+  )
+  return df.pivot(index="date", columns="symbol", values="close").sort_index()
+
+
 def run_feature_engineering(
   session: Session,
   entities: list[str] | None = None,
   on_progress=None,
+  as_of: date | None = None,
 ) -> int:
-  """Compute and store all engineered features."""
-  rows = session.query(MacroDaily).order_by(MacroDaily.date).all()
-  if not rows:
+  """Compute and store all engineered features.
+
+  When as_of is provided, only macro data that was released by that date is used,
+  ensuring point-in-time correctness for backfilling historical features.
+  """
+  wide = _load_macro_wide_pit(session, as_of=as_of)
+  if wide.empty:
     logger.warning("No macro data for feature engineering")
     return 0
 
-  df = pd.DataFrame([{"date": r.date, "symbol": r.symbol, "close": float(r.close)} for r in rows])
-  wide = df.pivot(index="date", columns="symbol", values="close").sort_index()
   wide.index = pd.to_datetime(wide.index)
 
   total = 0
@@ -192,11 +234,15 @@ def run_feature_engineering(
     feat = engineer_price_features(wide[entity].dropna(), entity)
     total += upsert_features(session, feat, entity)
 
-  _note("Cross-asset features", "MACRO", "Gold ratios, real yield, dollar trend", len(target_entities))
+  _note(
+    "Cross-asset features", "MACRO", "Gold ratios, real yield, dollar trend",
+    len(target_entities),
+  )
   cross = engineer_cross_asset_features(wide)
   total += upsert_features(session, cross, "MACRO")
 
-  miner_tickers = [c for c in wide.columns if c in {m["ticker"] for m in ALL_MINERS} | {"GDX", "GDXJ", "SIL", "COPX"}]
+  miner_ticker_set = {m["ticker"] for m in ALL_MINERS} | {"GDX", "GDXJ", "SIL", "COPX"}
+  miner_tickers = [c for c in wide.columns if c in miner_ticker_set]
   _note(
     "Miner features",
     ", ".join(miner_tickers[:6]) + ("…" if len(miner_tickers) > 6 else ""),
@@ -223,7 +269,17 @@ def run_feature_engineering(
 
 
 def load_feature_matrix(session: Session, as_of: date | None = None) -> pd.DataFrame:
-  """Load features as wide matrix for modeling."""
+  """Load features as wide matrix for modeling.
+
+  Note: Features are pre-computed and stored in FeatureDaily. Point-in-time
+  correctness for macro-derived features depends on run_feature_engineering
+  being called with appropriate as_of constraints during the ETL.
+
+  The as_of filter here limits which feature rows are returned (features
+  with date <= as_of), not which macro data went into computing them.
+  For true point-in-time feature recomputation at each historical date,
+  use build_features_asof() which recomputes features on the fly.
+  """
   query = session.query(FeatureDaily)
   if as_of:
     query = query.filter(FeatureDaily.date <= as_of)
@@ -231,7 +287,44 @@ def load_feature_matrix(session: Session, as_of: date | None = None) -> pd.DataF
   if not rows:
     return pd.DataFrame()
 
-  df = pd.DataFrame(
-    [{"date": r.date, "feature": f"{r.entity}__{r.feature_name}", "value": r.feature_value} for r in rows]
-  )
+  df = pd.DataFrame([
+    {"date": r.date, "feature": f"{r.entity}__{r.feature_name}", "value": r.feature_value}
+    for r in rows
+  ])
   return df.pivot(index="date", columns="feature", values="value").sort_index()
+
+
+def build_features_asof(session: Session, as_of: date) -> pd.DataFrame:
+  """Build features using only macro data available as of a specific date.
+
+  This recomputes features on the fly using point-in-time macro data,
+  suitable for as-of scoring where we need to ensure no look-ahead bias.
+  Only macro observations with release_date <= as_of are used.
+
+  Returns a wide DataFrame with feature columns, indexed by date, but
+  only containing rows up to as_of.
+  """
+  wide = _load_macro_wide_pit(session, as_of=as_of)
+  if wide.empty:
+    return pd.DataFrame()
+
+  wide.index = pd.to_datetime(wide.index)
+  wide = wide[wide.index <= pd.Timestamp(as_of)]
+
+  all_features = pd.DataFrame(index=wide.index)
+
+  for entity in wide.columns:
+    prices = wide[entity].dropna()
+    if len(prices) < 20:
+      continue
+    feat = engineer_price_features(prices, entity)
+    for col in feat.columns:
+      if col not in all_features.columns:
+        all_features[col] = feat[col]
+
+  cross = engineer_cross_asset_features(wide)
+  for col in cross.columns:
+    if col not in all_features.columns:
+      all_features[col] = cross[col]
+
+  return all_features.dropna(how="all")

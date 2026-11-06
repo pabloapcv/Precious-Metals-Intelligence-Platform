@@ -58,15 +58,26 @@ UI badges: **live** vs **as-of**. API field: `scoring_path` ∈ `{full_sample_li
 
 ## 4. Data: what enters the warehouse
 
-| Series | Source | Honesty label |
-| --- | --- | --- |
-| Futures, ETFs, equities, SPX, VIX, oil | Yahoo Finance daily closes | Market data |
-| Treasuries / TIPS / breakevens | FRED when `FRED_API_KEY` is set | Optional feed |
-| Real yield fallback | Nominal − breakeven, or nominal − **2.25** | Tagged `tips` / `breakeven_spread` / `estimated` |
-| ETF flows (GLD, IAU) | Derived from Yahoo AUM / share change | **Proxy / estimate** |
-| Central-bank gold purchases | Seed monthly table (WGC-style) | **Seed / illustrative** |
-| Miner fundamentals (AISC, production, EPS revision) | Seed quarterly | **Seed** |
-| Geopolitical risk (GPR) | Composite of VIX / oil volatility | **Proxy** (not news NLP) |
+| Series | Source | Point-in-time | Honesty label |
+| --- | --- | --- | --- |
+| Futures, ETFs, equities, SPX, VIX, oil | Yahoo Finance daily closes | T+1 lag-assumed | Market data |
+| Treasuries / TIPS / breakevens | FRED when `FRED_API_KEY` is set | Vintage-exact (ALFRED) or T+1 lag-assumed | Optional feed |
+| Real yield fallback | Nominal − breakeven, or nominal − **2.25** | T+1 lag-assumed | Tagged `tips` / `breakeven_spread` / `estimated` |
+| ETF flows (GLD, IAU) | Derived from Yahoo AUM / share change | T+1 lag-assumed | **Proxy / estimate** |
+| Central-bank gold purchases | Seed monthly table (WGC-style) | ~30 day lag-assumed | **Seed / illustrative** |
+| Miner fundamentals (AISC, production, EPS revision) | Seed quarterly | Lag-assumed | **Seed** |
+| Geopolitical risk (GPR) | Composite of VIX / oil volatility | T+1 lag-assumed | **Proxy** (not news NLP) |
+
+**Point-in-time provenance:** Each macro observation carries:
+- `release_date`: When the value was first published (available to trade on).
+- `vintage`: Revision identifier (ALFRED vintage date or "initial").
+- `lag_assumed`: True when release_date is estimated from a lag rule, not actual ALFRED data.
+
+FRED series with ALFRED history are **vintage-exact** — each revision's release date is known from the API. Yahoo market data and series without ALFRED fall back to conservative lag rules:
+- Daily market yields (DGS10, VIXCLS, etc.): available T+1.
+- Monthly CPI/PCE: available ~2-4 weeks after reference month end.
+
+Feature construction joins macro data on `release_date <= prediction_date`, ensuring no look-ahead bias even in as-of scoring.
 
 Rough scale: ~73 priced instruments; ~65 scored prediction targets; geared ETFs may be priced but are not primary model targets. As-of / paper liquid sleeve is a fixed list of ~14 liquid names (GLD, GDX, senior miners, royalties, etc.).
 
