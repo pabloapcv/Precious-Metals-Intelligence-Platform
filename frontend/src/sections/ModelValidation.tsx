@@ -8,6 +8,21 @@ interface ModelValidationProps {
   onOpenPipeline?: () => void
 }
 
+function formatCI(ci: { estimate: number; ci_lower: number; ci_upper: number } | null | undefined, asPct = false): string {
+  if (!ci) return '—'
+  const fmt = (v: number) => asPct ? `${(v * 100).toFixed(1)}%` : v.toFixed(3)
+  return `${fmt(ci.estimate)} [${fmt(ci.ci_lower)}, ${fmt(ci.ci_upper)}]`
+}
+
+function SignificanceChip({ significant, pAdj }: { significant: boolean; pAdj: number | null }) {
+  if (pAdj === null) return <span className="status-chip pending">—</span>
+  return (
+    <span className={`status-chip ${significant ? 'ok' : 'pending'}`}>
+      {significant ? '✓ sig' : 'ns'} (p={pAdj.toFixed(3)})
+    </span>
+  )
+}
+
 export function ModelValidation({ research, onOpenPipeline }: ModelValidationProps) {
   const { model_catalog: models, model_summary: summary, purged_evidence: evidence, integrity } = research
 
@@ -39,6 +54,7 @@ export function ModelValidation({ research, onOpenPipeline }: ModelValidationPro
           <p className="row-sub">
             Generated {evidence.generated_at?.slice(0, 10)} · {evidence.horizon_days}d horizon · {evidence.cost_bps} bps flip cost
             {integrity ? ` · history/paper = ${integrity.history_scoring}` : ''}
+            {evidence.inference_summary ? ` · ${evidence.inference_summary.n_comparisons} DM tests, Holm corrected` : ''}
           </p>
           <div className="table-wrap" style={{ marginTop: '0.75rem' }}>
             <table className="data-table institutional">
@@ -76,6 +92,81 @@ export function ModelValidation({ research, onOpenPipeline }: ModelValidationPro
               </tbody>
             </table>
           </div>
+
+          {evidence.studies.some(s => s.books.some(b => b.total_return_ci)) && (
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>Confidence intervals (95%)</h4>
+              <div className="table-wrap">
+                <table className="data-table institutional">
+                  <thead>
+                    <tr>
+                      <th>Study</th>
+                      <th>Model</th>
+                      <th>Total return [CI]</th>
+                      <th>Hit rate [CI]</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {evidence.studies.flatMap((study) =>
+                      study.books
+                        .filter((b) => b.name === 'gradient_boosting')
+                        .map((book) => (
+                          <tr key={`${study.name}-${book.name}`}>
+                            <td className="mono gold-text">{study.name}</td>
+                            <td>{book.name.replace(/_/g, ' ')}</td>
+                            <td className="mono">{formatCI(book.total_return_ci, true)}</td>
+                            <td className="mono">{formatCI(book.hit_rate_ci, true)}</td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {evidence.studies.some(s => s.dm_comparisons && s.dm_comparisons.length > 0) && (
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>Diebold-Mariano tests (model vs baselines)</h4>
+              <p className="row-sub" style={{ marginBottom: '0.5rem' }}>
+                Tests whether the gradient boosting model's returns differ significantly from each baseline.
+                p-adj accounts for multiple comparisons (Holm-Bonferroni).
+              </p>
+              <div className="table-wrap">
+                <table className="data-table institutional">
+                  <thead>
+                    <tr>
+                      <th>Study</th>
+                      <th>Baseline</th>
+                      <th className="num">p-adj</th>
+                      <th>Significant</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {evidence.studies.flatMap((study) =>
+                      (study.dm_comparisons || []).map((comp) => (
+                        <tr key={`${study.name}-${comp.baseline}`}>
+                          <td className="mono gold-text">{study.name}</td>
+                          <td>{comp.baseline.replace(/_/g, ' ')}</td>
+                          <td className="num mono">{comp.p_adjusted?.toFixed(3) ?? '—'}</td>
+                          <td>
+                            <SignificanceChip significant={comp.significant} pAdj={comp.p_adjusted ?? null} />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {evidence.studies.map((study) =>
+                study.dm_summary ? (
+                  <p key={`${study.name}-summary`} className="row-sub" style={{ marginTop: '0.5rem' }}>
+                    <strong>{study.name}:</strong> {study.dm_summary}
+                  </p>
+                ) : null
+              )}
+            </div>
+          )}
         </section>
       )}
 

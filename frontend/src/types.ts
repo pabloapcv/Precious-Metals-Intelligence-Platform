@@ -145,6 +145,12 @@ export interface ResearchData {
     horizon_days: number
     cost_bps: number
     note: string
+    inference_summary?: {
+      n_comparisons: number
+      bootstrap_replications: number
+      confidence_level: number
+      seed: number
+    } | null
     studies: Array<{
       name: string
       question: string
@@ -160,9 +166,30 @@ export interface ResearchData {
         name: string
         final_wealth: number | null
         total_return: number | null
+        total_return_ci?: {
+          estimate: number
+          ci_lower: number
+          ci_upper: number
+          confidence: number
+        } | null
         max_drawdown: number | null
         hit_rate: number | null
+        hit_rate_ci?: {
+          estimate: number
+          ci_lower: number
+          ci_upper: number
+          confidence: number
+        } | null
       }>
+      dm_comparisons?: Array<{
+        baseline: string
+        p_value: number | null
+        p_adjusted: number | null
+        significant: boolean
+        mean_loss_diff: number | null
+        interpretation: string | null
+      }>
+      dm_summary?: string | null
     }>
     claims: Array<Record<string, string>>
   } | null
