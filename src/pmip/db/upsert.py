@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 CONSTRAINT_COLUMNS: dict[str, list[str]] = {
-  "uq_macro_daily_date_symbol": ["date", "symbol"],
+  "uq_macro_daily_date_symbol_vintage": ["date", "symbol", "vintage"],
   "uq_etf_flows_date_ticker": ["date", "ticker"],
   "uq_cb_month_country": ["month", "country"],
   "uq_geopolitical_date": ["date"],

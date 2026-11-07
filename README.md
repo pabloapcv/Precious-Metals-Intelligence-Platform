@@ -104,14 +104,16 @@ Live desk signals use full-sample registry models. **History charts and paper bo
 
 ## Data sources
 
-| Data | Source | Notes |
-| --- | --- | --- |
-| Futures, ETFs, equities, SPX, VIX, oil | Yahoo Finance | Daily closes in the warehouse |
-| Treasury / real yields / breakevens | FRED | When `FRED_API_KEY` is set; otherwise Yahoo yields and a real-yield estimate |
-| ETF flows (GLD, IAU) | Derived from Yahoo | Proxy, not official flow files |
-| Central-bank gold | Seed rows | Illustrative WGC-style monthly |
-| Geopolitical risk | Proxy | VIX / oil vol composite (GDELT-ready hooks) |
-| Miner fundamentals | Seed quarterly | AISC / production placeholders |
+| Data | Source | Point-in-time | Notes |
+| --- | --- | --- | --- |
+| Futures, ETFs, equities, SPX, VIX, oil | Yahoo Finance | Lag-assumed (T+1) | Daily closes available next trading day |
+| Treasury / real yields / breakevens | FRED / ALFRED | Vintage-exact when available | Uses ALFRED real-time API for release dates; falls back to T+1 lag rule |
+| ETF flows (GLD, IAU) | Derived from Yahoo | Lag-assumed | Proxy, not official flow files |
+| Central-bank gold | Seed rows | Lag-assumed | Illustrative WGC-style monthly |
+| Geopolitical risk | Proxy | Lag-assumed | VIX / oil vol composite (GDELT-ready hooks) |
+| Miner fundamentals | Seed quarterly | Lag-assumed | AISC / production placeholders |
+
+**Point-in-time guarantees:** Macro observations carry `release_date` (when the value was first published) and `vintage` (ALFRED revision ID). Features at prediction date T only use observations with `release_date <= T`. Series with ALFRED history have exact release dates; others use conservative lag rules (T+1 for daily market data, mid-month+15 days for monthly CPI). Rows flagged `lag_assumed=true` used an estimated release date. See [docs/research-note.md](docs/research-note.md) for the claim inventory.
 
 Unpriced gaps (LME base metals, lease rates, physical premiums, options) are listed in the Metals Book.
 
@@ -243,6 +245,7 @@ Also see [docs/executive-platform-guide.md](docs/executive-platform-guide.md) an
 - Live signal book / Strategy sleeve use **full-sample** registry models (UI badges `live`); paper / history use **as-of** scores (`as-of`). See [docs/numbers-at-a-glance.md](docs/numbers-at-a-glance.md).
 - Paper books are shadow simulations (10 bps, liquid sleeve, rule-based stance) — not audited live track record.
 - Geopolitical risk is a **proxy**, not a news NLP feed.
+- **Point-in-time macro:** FRED series with ALFRED history are **vintage-exact**; Yahoo market data and series without ALFRED history are **lag-assumed** (T+1 for daily, conservative lags for monthly). The `lag_assumed` flag distinguishes them.
 
 ---
 

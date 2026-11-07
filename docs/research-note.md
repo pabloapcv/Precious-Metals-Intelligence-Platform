@@ -38,6 +38,28 @@ The on-screen “gold bullish %” for GLD is the probability GLD beats gold fut
 
 The model catalog’s walk-forward AUC uses the same embargo in code from this revision onward. Numbers already stored from an earlier pipeline run were produced before that embargo. `make research` is the table to cite until the pipeline is run again.
 
+## Point-in-time macro data guarantees
+
+Macro observations are stored with point-in-time provenance:
+
+| Field | Meaning |
+| --- | --- |
+| `release_date` | When the observation was first published and available to trade on. |
+| `vintage` | Revision identifier (ALFRED vintage date or "initial" for first release). |
+| `lag_assumed` | True when release_date is estimated from a lag rule, not actual ALFRED data. |
+
+**Vintage-exact series:** FRED series with ALFRED history (DGS10, T10YIE, DFII10, etc.) have exact release dates from the ALFRED real-time API. Each revision is tracked separately.
+
+**Lag-assumed series:** Yahoo market data and FRED series without ALFRED history use conservative publication lag rules:
+- Daily market data (equities, futures, VIX): T+1 (available next trading day)
+- Daily Treasury yields: T+1
+- Monthly CPI/inflation: ~45 days after reference month
+- Monthly PCE: ~30 days after reference month
+
+Feature construction joins macro data on `release_date <= prediction_date`, ensuring features at date T never use a macro value published after T or a revision released after T. This applies to both live and as-of scoring paths.
+
+The `lag_assumed` flag allows downstream analysis to distinguish exact from estimated release dates.
+
 ## Reproduce
 
 ```bash

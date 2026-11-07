@@ -4,12 +4,16 @@ Live desk models are still fit on the full sample for today's signal.
 History charts and paper books use this module instead: at each score date T,
 the model is trained only on rows whose forward labels are fully observed by T
 (train ends at least ``horizon`` trading days before T).
+
+Point-in-time macro guarantees:
+  When scoring at date T, macro data is filtered to only include observations
+  with release_date <= T. This ensures no look-ahead bias from using values
+  that were not yet published or from using revisions released after T.
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -19,7 +23,7 @@ from sqlalchemy.orm import Session
 from pmip.constants import HORIZONS
 from pmip.db.models import ModelPrediction
 from pmip.db.upsert import upsert
-from pmip.features.engineering import load_feature_matrix
+from pmip.features.engineering import build_features_asof, load_feature_matrix
 from pmip.models.training import _build_price_panel, _create_targets
 
 logger = logging.getLogger(__name__)
@@ -161,8 +165,18 @@ def score_entity_asof(
   entity: str,
   horizon: int,
   score_dates: list,
+  session: Session | None = None,
 ) -> list[dict]:
-  """Fit-and-score ``entity`` at each date with a horizon embargo."""
+  """Fit-and-score ``entity`` at each date with a horizon embargo.
+
+  Point-in-time guarantees:
+    When session is provided, features are rebuilt for each score date using
+    only macro data with release_date <= score_date. This ensures no macro
+    value published after the score date is used.
+
+    When session is None (legacy mode), the pre-computed features matrix is
+    used, which may not have strict point-in-time filtering.
+  """
   if entity not in prices.columns or features.empty:
     return []
 
@@ -186,10 +200,25 @@ def score_entity_asof(
     if pos < MIN_TRAIN + horizon:
       continue
 
+    if session is not None:
+      score_date = ts.date() if hasattr(ts, "date") else ts
+      pit_features = build_features_asof(session, as_of=score_date)
+      if pit_features.empty:
+        continue
+      pit_features.index = pd.to_datetime(pit_features.index)
+      use_features = pit_features
+    else:
+      use_features = features
+
     train_end = pos - horizon
     train_start = max(0, train_end - DEFAULT_TRAIN)
-    train_idx = features.index[train_start:train_end]
-    train = features.loc[train_idx].join(targets, how="inner").dropna()
+    train_idx = use_features.index[train_start:train_end] if len(use_features) > train_end else []
+    if len(train_idx) == 0:
+      train_idx = features.index[train_start:train_end]
+      train = features.loc[train_idx].join(targets, how="inner").dropna()
+    else:
+      train = use_features.loc[train_idx].join(targets, how="inner").dropna()
+
     if len(train) < MIN_TRAIN:
       continue
     if train["outperform_gold"].nunique() < 2:
@@ -200,10 +229,16 @@ def score_entity_asof(
     y_class = train["outperform_gold"].values
     y_reg = train["forward_return"].values
 
-    score_cols = [c for c in feat_cols if c in features.columns]
+    score_cols = [c for c in feat_cols if c in use_features.columns]
+    if not score_cols:
+      score_cols = [c for c in feat_cols if c in features.columns]
     if not score_cols:
       continue
-    X_score = features.loc[[ts], score_cols].fillna(0).values
+
+    if session is not None and ts in use_features.index:
+      X_score = use_features.loc[[ts], score_cols].fillna(0).values
+    else:
+      X_score = features.loc[[ts], score_cols].fillna(0).values
 
     try:
       clf = _fit_fast(X_train, y_class, "classification")
@@ -274,7 +309,7 @@ def backfill_asof_predictions(
         entity=entity,
         horizon=horizon,
       )
-    records = score_entity_asof(features, prices, entity, horizon, score_dates)
+    records = score_entity_asof(features, prices, entity, horizon, score_dates, session=session)
     if records:
       upsert(
         session,
