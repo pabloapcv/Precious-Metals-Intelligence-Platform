@@ -40,8 +40,10 @@ class WalkForwardConfig:
 
 
 def _build_price_panel(session: Session) -> pd.DataFrame:
-  rows = session.query(MacroDaily).order_by(MacroDaily.date).all()
+  """Build wide price panel from macro_daily using latest available vintage per date/symbol."""
+  rows = session.query(MacroDaily).order_by(MacroDaily.date, MacroDaily.release_date.desc()).all()
   df = pd.DataFrame([{"date": r.date, "symbol": r.symbol, "close": float(r.close)} for r in rows])
+  df = df.drop_duplicates(subset=["date", "symbol"], keep="first")
   return df.pivot(index="date", columns="symbol", values="close").sort_index()
 
 

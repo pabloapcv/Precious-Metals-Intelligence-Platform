@@ -57,15 +57,21 @@ def upgrade() -> None:
             ['date', 'symbol', 'vintage']
         )
     else:
-        op.execute("""
-            CREATE UNIQUE INDEX IF NOT EXISTS uq_macro_daily_date_symbol_vintage
-            ON macro_daily (date, symbol, vintage)
-        """)
+        with op.batch_alter_table('macro_daily', recreate='always') as batch_op:
+            batch_op.drop_constraint('uq_macro_daily_date_symbol', type_='unique')
+            batch_op.create_unique_constraint(
+                'uq_macro_daily_date_symbol_vintage',
+                ['date', 'symbol', 'vintage']
+            )
 
 
 def downgrade() -> None:
     conn = op.get_bind()
     dialect = conn.dialect.name
+
+    # Delete non-initial vintages before restoring old (date, symbol) uniqueness.
+    # This is LOSSY - all revision data will be deleted.
+    op.execute("DELETE FROM macro_daily WHERE vintage != 'initial'")
 
     if dialect == 'postgresql':
         op.drop_constraint('uq_macro_daily_date_symbol_vintage', 'macro_daily', type_='unique')
@@ -75,11 +81,12 @@ def downgrade() -> None:
             ['date', 'symbol']
         )
     else:
-        op.execute('DROP INDEX IF EXISTS uq_macro_daily_date_symbol_vintage')
-        op.execute("""
-            CREATE UNIQUE INDEX IF NOT EXISTS uq_macro_daily_date_symbol
-            ON macro_daily (date, symbol)
-        """)
+        with op.batch_alter_table('macro_daily', recreate='always') as batch_op:
+            batch_op.drop_constraint('uq_macro_daily_date_symbol_vintage', type_='unique')
+            batch_op.create_unique_constraint(
+                'uq_macro_daily_date_symbol',
+                ['date', 'symbol']
+            )
 
     op.drop_column('macro_daily', 'ingested_at')
     op.drop_column('macro_daily', 'lag_assumed')
